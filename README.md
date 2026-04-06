@@ -1,51 +1,54 @@
-# SMSNode Client Application
+# SMSNode — Клиентское приложение
 
-This is a Kotlin Multiplatform project targeting Android, iOS, Web (WasmJS), and Desktop (JVM). It serves as the primary user interface for the SMSNode backend, allowing users to send, receive, and manage SMS messages using hardware GSM gateways.
+**Read in English:** see [`README.en.md`](README.en.md).
 
-## Features
+Это кросс-платформенное приложение, написанное на Kotlin Multiplatform. Оно предназначено для работы на Android, iOS, в браузере (Web / WasmJS) и как Desktop-приложение (JVM).
+Приложение служит основным пользовательским интерфейсом для бэкенда SMSNode, позволяя отправлять, получать и управлять SMS-сообщениями через аппаратные GSM-шлюзы.
 
-### 🔹 Modern & Adaptive UI
-- **Responsive Layout:** Automatically switches between a bottom `NavigationBar` on mobile devices (width < 600dp) and a side `NavigationRail` on tablets/desktops to optimize screen space.
-- **Dynamic Theming:** Fully supports system Dark and Light modes based on Material 3 guidelines.
-- **Optimized Content Width:** Content is centered and bounded by a maximum width (840dp) to prevent unreadable stretching on ultra-wide monitors.
+## Ключевые возможности
 
-### 🔹 Core User Functionality
-- **Seamless Onboarding:** Users are automatically logged in immediately after successful registration. No need to re-enter credentials.
-- **Dialogs & Chat:** WhatsApp/Telegram-style messenger interface.
-    - **Filters:** Easily filter dialogs by "All", "Unread", "Incoming", or "Outgoing".
-    - **Polling:** Real-time message updates without needing to pull-to-refresh.
-- **SMS Templates:**
-    - Save frequently used messages as templates.
-    - Insert a template into the chat box with one click.
-    - **Global Templates:** Administrators can create and edit templates that are available to all users.
-- **My SIMs:** View SIM cards assigned to your account and attach custom text labels (e.g., "Work", "Personal") to easily identify them.
-- **Contacts & Groups:**
-    - Save and edit contacts. External phone numbers are automatically replaced with contact names throughout the app.
-    - Organize contacts into groups for easy management.
-    - **Mass Sending:** Send SMS messages to an entire group of contacts at once, with the ability to choose a specific SIM card or use automatic load balancing.
+### 🔹 Современный и адаптивный интерфейс (Responsive UI)
+- **Умная навигация:** Приложение автоматически переключается между нижней панелью вкладок (`NavigationBar`) на мобильных экранах (ширина < 600dp) и боковым меню (`NavigationRail`) на планшетах и десктопах, экономя вертикальное пространство.
+- **Темы оформления:** Полная поддержка светлой и темной тем на основе настроек системы и рекомендаций Material 3.
+- **Оптимизация контента:** Чтобы тексты и элементы не растягивались до нечитаемых размеров на сверхшироких мониторах, весь контент по центру ограничен максимальной шириной (840dp).
 
-### 🔹 Administrator Panel
-- **Gateway Management:** Add, edit, test (ping), and delete GSM gateways (GOIP, Skyline, etc.).
-    - **Safe Deletion:** To prevent database integrity issues, attempting to delete a gateway with active SIM cards returns an error. The app then offers a "Force Delete" option to cascade delete the gateway and its resources.
-    - **Auto-Discovery:** Automatically detect newly connected SIM channels based on UDP keepalive packets and add them with one click.
-- **User Management:** Change user roles, deactivate accounts, view Telegram IDs, and assign/revoke specific SIM cards.
-- **Registration Mode:** Switch between "Open", "Closed", and "Semi-Open (Approval required)" directly from the app.
-- **Pending Approvals:** Approve or reject user registrations when in semi-open mode.
-- **Global Message Log:** View all SMS traffic across the entire system for auditing.
+### 🔹 Функционал для пользователей
+- **Бесшовный вход:** Автоматическая авторизация и переход к диалогам сразу после успешной регистрации — вводить данные заново не нужно.
+- **Диалоги и чат:** Знакомый интерфейс мессенджера (в стиле WhatsApp/Telegram).
+    - **Фильтрация:** Диалоги можно мгновенно отфильтровать: «Все», «Непрочитанные», «Входящие» и «Исходящие».
+    - **Фоновое обновление:** Автоматическая подгрузка новых сообщений (polling).
+- **Шаблоны SMS:**
+    - Создавайте шаблоны для часто отправляемых сообщений.
+    - Вставка шаблона прямо в строку ввода в один клик.
+    - **Глобальные шаблоны:** Администраторы могут создавать "общие" шаблоны, которые будут видны всем пользователям системы.
+- **Мои номера (SIM-карты):** Просмотр назначенных номеров с возможностью задавать для них собственные **текстовые подписи** (например: «Рабочий», «МТС-Инфо»), чтобы легко различать их при отправке.
+- **Контакты и Группы:**
+    - Управление адресной книгой. "Голые" номера телефонов автоматически заменяются на понятные имена контактов.
+    - Объединение контактов в группы для быстрой организации базы.
+    - **Массовая рассылка:** Отправка SMS-сообщений сразу всей группе контактов с возможностью выбора конкретной SIM-карты или автоматической балансировки.
+
+### 🔹 Администраторская панель
+- **Управление шлюзами:** Добавление, редактирование, встроенный ping-тест и удаление GSM-шлюзов (GOIP, Skyline и т.д.).
+    - **Безопасное удаление:** Система предотвращает случайное удаление шлюза, к которому привязаны SIM-карты (перехватывается ошибка конфликта 409). При возникновении конфликта предлагается опция безопасного «Форсированного удаления», которая каскадно удалит шлюз вместе с его зависимостями.
+    - **Авто-обнаружение каналов:** Из keepalive UDP-пакетов администратор видит новые подключенные порты и может добавить их в БД в один клик.
+- **Управление пользователями:** Смена ролей (Admin/User), деактивация учёток, просмотр Telegram ID и назначение/отзыв конкретных SIM-карт.
+- **Режим регистрации:** Изменение политики регистрации ("Открытая", "Закрытая", "По заявкам") без перезагрузки бэкенда.
+- **Заявки:** Удобное одобрение или отклонение новых пользователей (в режиме "По заявкам").
+- **Глобальный лог сообщений:** Доступ ко всем отправленным и полученным SMS в системе для целей аудита.
 
 ---
 
-## 🛠 Project Structure
+## 🛠 Структура проекта
 
-* [/composeApp](./composeApp/src) contains the shared Compose Multiplatform UI and logic.
-  * [commonMain](./composeApp/src/commonMain/kotlin) is where 99% of the code lives (ViewModel, UI screens, Ktor HTTP Client, Models).
-  * Platform-specific folders (e.g., `androidMain`, `jvmMain`, `wasmJsMain`) contain platform bindings and entry points.
-* [/iosApp](./iosApp/iosApp) contains the Xcode project for iOS deployment.
+* [/composeApp](./composeApp/src) — общая бизнес-логика и UI на Compose Multiplatform.
+  * [commonMain](./composeApp/src/commonMain/kotlin) — ядро приложения (ViewModels, экраны, HTTP-клиент Ktor, модели). 99% кода находится здесь.
+  * Платформо-специфичные папки (`androidMain`, `jvmMain`, `wasmJsMain`) — точки входа.
+* [/iosApp](./iosApp/iosApp) — проект Xcode для сборки под iOS.
 
-## 🚀 Build and Run
+## 🚀 Сборка и запуск
 
 ### Android
-To build and run the development version of the Android app, use the run widget in Android Studio / IntelliJ or run:
+Для запуска Android-приложения используйте Android Studio / IntelliJ IDEA или терминал:
 ```shell
 # macOS/Linux
 ./gradlew :composeApp:assembleDebug
@@ -54,8 +57,8 @@ To build and run the development version of the Android app, use the run widget 
 .\gradlew.bat :composeApp:assembleDebug
 ```
 
-### Desktop (JVM)
-To run the Desktop version locally (Windows/macOS/Linux):
+### Desktop (Windows, macOS, Linux)
+Для запуска десктопной JVM-версии:
 ```shell
 # macOS/Linux
 ./gradlew :composeApp:run
@@ -64,8 +67,8 @@ To run the Desktop version locally (Windows/macOS/Linux):
 .\gradlew.bat :composeApp:run
 ```
 
-### Web (WasmJS)
-To run the web app in a browser (supports modern browsers for faster execution):
+### Web (Браузер)
+Запуск веб-сборки (рекомендуется WasmJS для максимальной производительности в современных браузерах):
 ```shell
 # macOS/Linux
 ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
@@ -73,7 +76,3 @@ To run the web app in a browser (supports modern browsers for faster execution):
 # Windows
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
 ```
-
----
-
-*Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html) and [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform).*

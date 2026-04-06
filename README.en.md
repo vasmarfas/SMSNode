@@ -1,79 +1,66 @@
 # SMSNode Client Application
 
-This is a Kotlin Multiplatform project targeting Android, iOS, Web (WasmJS), and Desktop (JVM). It serves as the primary user interface for the SMSNode backend, allowing users to send, receive, and manage SMS messages using hardware GSM gateways.
+**Русский:** [`README.md`](README.md)
 
-## Features
+## Purpose
 
-### 🔹 Modern & Adaptive UI
-- **Responsive Layout:** Automatically switches between a bottom `NavigationBar` on mobile devices (width < 600dp) and a side `NavigationRail` on tablets/desktops to optimize screen space.
-- **Dynamic Theming:** Fully supports system Dark and Light modes based on Material 3 guidelines.
-- **Optimized Content Width:** Content is centered and bounded by a maximum width (840dp) to prevent unreadable stretching on ultra-wide monitors.
+Client application for the SMSNode backend: sending and receiving SMS, managing dialogs, contacts, and settings related to GSM gateways.
 
-### 🔹 Core User Functionality
-- **Seamless Onboarding:** Users are automatically logged in immediately after successful registration. No need to re-enter credentials.
-- **Dialogs & Chat:** WhatsApp/Telegram-style messenger interface.
-    - **Filters:** Easily filter dialogs by "All", "Unread", "Incoming", or "Outgoing".
-    - **Polling:** Real-time message updates without needing to pull-to-refresh.
-- **SMS Templates:**
-    - Save frequently used messages as templates.
-    - Insert a template into the chat box with one click.
-    - **Global Templates:** Administrators can create and edit templates that are available to all users.
-- **My SIMs:** View SIM cards assigned to your account and attach custom text labels (e.g., "Work", "Personal") to easily identify them.
-- **Contacts & Groups:**
-    - Save and edit contacts. External phone numbers are automatically replaced with contact names throughout the app.
-    - Organize contacts into groups for easy management.
-    - **Mass Sending:** Send SMS messages to an entire group of contacts at once, with the ability to choose a specific SIM card or use automatic load balancing.
+## Target platforms
 
-### 🔹 Administrator Panel
-- **Gateway Management:** Add, edit, test (ping), and delete GSM gateways (GOIP, Skyline, etc.).
-    - **Safe Deletion:** To prevent database integrity issues, attempting to delete a gateway with active SIM cards returns an error. The app then offers a "Force Delete" option to cascade delete the gateway and its resources.
-    - **Auto-Discovery:** Automatically detect newly connected SIM channels based on UDP keepalive packets and add them with one click.
-- **User Management:** Change user roles, deactivate accounts, view Telegram IDs, and assign/revoke specific SIM cards.
-- **Registration Mode:** Switch between "Open", "Closed", and "Semi-Open (Approval required)" directly from the app.
-- **Pending Approvals:** Approve or reject user registrations when in semi-open mode.
-- **Global Message Log:** View all SMS traffic across the entire system for auditing.
+Implemented with Kotlin Multiplatform (Compose Multiplatform):
 
----
+| Platform | Module |
+|----------|--------|
+| Android | `composeApp` |
+| iOS | `composeApp` + Xcode project under `iosApp` |
+| Desktop | JVM |
+| Web | WasmJS |
 
-## 🛠 Project Structure
+## Functionality
 
-* [/composeApp](./composeApp/src) contains the shared Compose Multiplatform UI and logic.
-  * [commonMain](./composeApp/src/commonMain/kotlin) is where 99% of the code lives (ViewModel, UI screens, Ktor HTTP Client, Models).
-  * Platform-specific folders (e.g., `androidMain`, `jvmMain`, `wasmJsMain`) contain platform bindings and entry points.
-* [/iosApp](./iosApp/iosApp) contains the Xcode project for iOS deployment.
+**UI.** Adaptive layout: bottom navigation on narrow viewports, side navigation on wide screens; light and dark themes (Material 3); content max width capped at 840 dp.
 
-## 🚀 Build and Run
+**User.** Registration and sign-in; dialog list with filters (all / unread / incoming / outgoing); chat with periodic server polling; message templates (including global templates defined by administrators); assigned SIM cards with custom labels; contacts, contact groups, bulk SMS to groups.
 
-### Android
-To build and run the development version of the Android app, use the run widget in Android Studio / IntelliJ or run:
+**Administrator.** Gateways: create, read, update, delete, connectivity check, conflict-aware deletion (optional forced delete); channel discovery from keepalive data. Users: roles, deactivation, SIM assignment. Registration mode (open / closed / approval-based). Pending registration handling. System-wide message log for auditing.
+
+## Repository layout
+
+- `composeApp/src/commonMain` — shared code (UI, ViewModel, Ktor HTTP client, data models).
+- `composeApp/src/androidMain`, `jvmMain`, `iosMain`, `jsMain`, `wasmJsMain` — platform-specific code and entry points.
+- `iosApp` — Xcode project for iOS builds.
+
+## Build and run
+
+**Android**
+
 ```shell
-# macOS/Linux
 ./gradlew :composeApp:assembleDebug
+```
 
-# Windows
+```shell
 .\gradlew.bat :composeApp:assembleDebug
 ```
 
-### Desktop (JVM)
-To run the Desktop version locally (Windows/macOS/Linux):
-```shell
-# macOS/Linux
-./gradlew :composeApp:run
+**Desktop (JVM)**
 
-# Windows
+```shell
+./gradlew :composeApp:run
+```
+
+```shell
 .\gradlew.bat :composeApp:run
 ```
 
-### Web (WasmJS)
-To run the web app in a browser (supports modern browsers for faster execution):
-```shell
-# macOS/Linux
-./gradlew :composeApp:wasmJsBrowserDevelopmentRun
+**Web (WasmJS, development)**
 
-# Windows
+```shell
+./gradlew :composeApp:wasmJsBrowserDevelopmentRun
+```
+
+```shell
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
 ```
 
----
-
-*Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html) and [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform).*
+References: [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html), [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform).

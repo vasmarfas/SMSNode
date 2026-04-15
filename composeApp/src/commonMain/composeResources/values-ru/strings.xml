@@ -122,4 +122,5 @@
     <string name="group_members_empty">Сначала добавьте контакты.</string>
     <string name="group_members_title">Состав: %1$s</string>
     <string name="group_mass_send_text">Сообщение будет отправлено всем контактам группы.</string>
+    <string name="demo_server_banner">Демо-сервер (Read-only): Изменения не сохраняются</string>
 </resources>

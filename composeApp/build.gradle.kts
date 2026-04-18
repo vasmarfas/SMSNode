@@ -140,16 +140,21 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("icons/logo.png"))
                 bundleID = "com.vasmarfas.smsnode"
-                signing {
-                    sign.set(true)
-                    identity.set(System.getenv("APPLE_DEVELOPER_ID_IDENTITY"))
+                val identity = System.getenv("APPLE_DEVELOPER_ID_IDENTITY")
+                if (!identity.isNullOrBlank()) {
+                    signing {
+                        sign.set(true)
+                        this.identity.set(identity)
+                    }
                 }
-                notarization {
-                    appleID.set(System.getenv("APPLE_ID"))
-                    password.set(System.getenv("APPLE_ID_PASSWORD"))
-                    teamID.set(System.getenv("APPLE_TEAM_ID"))
+                val appleId = System.getenv("APPLE_ID")
+                if (!appleId.isNullOrBlank()) {
+                    notarization {
+                        appleID.set(appleId)
+                        password.set(System.getenv("APPLE_ID_PASSWORD"))
+                        teamID.set(System.getenv("APPLE_TEAM_ID"))
+                    }
                 }
-
             }
             windows {
                 iconFile.set(project.file("icons/logo.ico"))

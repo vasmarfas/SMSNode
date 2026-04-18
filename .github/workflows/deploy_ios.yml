@@ -49,13 +49,17 @@ jobs:
             cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
           fi
 
-      - name: Build Kotlin Framework
-        run: ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
-
       - name: Build and Archive iOS App
         run: |
           cd iosApp
-          xcodebuild -scheme iosApp -archivePath $RUNNER_TEMP/iosApp.xcarchive -sdk iphoneos -configuration Release archive
+          xcodebuild -scheme iosApp \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -sdk iphoneos \
+            -configuration Release \
+            archive \
+            -allowProvisioningUpdates \
+            -destination 'generic/platform=iOS' \
+            "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

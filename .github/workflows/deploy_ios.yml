@@ -57,8 +57,9 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             archive \
-            -allowProvisioningUpdates \
-            -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="SMSNode AppStore Profile" \
             "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
 
       - name: Upload Artifact

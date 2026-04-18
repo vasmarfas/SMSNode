@@ -10,7 +10,7 @@
 	<string>manual</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.vasmarfas.smsnode</key>
+		<key>com.vasmarfas.smsnode.SMSNode</key>
 		<string>SMSNode AppStore Profile</string>
 	</dict>
 </dict>

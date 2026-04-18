@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vasmarfas.smsnode.ui.viewmodel.AppViewModel
 import com.vasmarfas.smsnode.ui.viewmodel.LoginResult
+import com.vasmarfas.smsnode.getPlatform
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface

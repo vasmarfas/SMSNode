@@ -1,0 +1,47 @@
+name: Deploy Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'App versionName (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+      publish_ms_store:
+        description: 'Publish to Microsoft Store'
+        type: boolean
+        default: false
+
+jobs:
+  build_windows:
+    name: Build Windows (MSI)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build MSI
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+        run: ./gradlew :composeApp:packageMsi
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: composeApp/build/compose/binaries/main/msi/*.msi
+
+      - name: Publish to MS Store
+        if: ${{ inputs.publish_ms_store == true }}
+        uses: microsoft/action-store-publish@v3
+        with:
+          tenant-id: ${{ secrets.MS_STORE_TENANT_ID }}
+          client-id: ${{ secrets.MS_STORE_CLIENT_ID }}
+          client-secret: ${{ secrets.MS_STORE_CLIENT_SECRET }}
+          app-id: ${{ secrets.MS_STORE_APP_ID }}
+          package-path: composeApp/build/compose/binaries/main/msi/*.msi

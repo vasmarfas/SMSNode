@@ -1,0 +1,38 @@
+name: Deploy Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'App versionName (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build_linux:
+    name: Build Linux (DEB/RPM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Linux Deb/Rpm
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+        run: ./gradlew :composeApp:packageDeb :composeApp:packageRpm
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            composeApp/build/compose/binaries/main/deb/*.deb
+            composeApp/build/compose/binaries/main/rpm/*.rpm

@@ -139,6 +139,17 @@ compose.desktop {
 
             macOS {
                 iconFile.set(project.file("icons/logo.png"))
+                bundleID = "com.vasmarfas.smsnode"
+                signing {
+                    sign.set(true)
+                    identity.set(System.getenv("APPLE_DEVELOPER_ID_IDENTITY"))
+                }
+                notarization {
+                    appleID.set(System.getenv("APPLE_ID"))
+                    password.set(System.getenv("APPLE_ID_PASSWORD"))
+                    teamID.set(System.getenv("APPLE_TEAM_ID"))
+                }
+
             }
             windows {
                 iconFile.set(project.file("icons/logo.ico"))

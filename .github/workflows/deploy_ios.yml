@@ -63,11 +63,20 @@ jobs:
             PRODUCT_BUNDLE_IDENTIFIER="com.vasmarfas.smsnode" \
             "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
 
+      - name: Export IPA
+        run: |
+          cd iosApp
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/iosApp.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export \
+            -allowProvisioningUpdates
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-archive
-          path: ${{ runner.temp }}/iosApp.xcarchive
+          name: ios-ipa
+          path: ${{ runner.temp }}/export/*.ipa
 
       - name: Upload to App Store Connect
         if: ${{ inputs.publish_app_store == true }}
@@ -75,5 +84,11 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          echo "Need a PKG or IPA for upload. Archive uploaded as artifact."
-          # xcrun altool --upload-app -f "${{ runner.temp }}/iosApp.xcarchive" -t ios -u "$APPLE_ID" -p "$APPLE_APP_SPECIFIC_PASSWORD"
+          IPA_FILE=$(find ${{ runner.temp }}/export -name "*.ipa" | head -n 1)
+          if [ -n "$IPA_FILE" ]; then
+            echo "Uploading $IPA_FILE to App Store Connect..."
+            xcrun altool --upload-app -f "$IPA_FILE" -t ios -u "$APPLE_ID" -p "$APPLE_APP_SPECIFIC_PASSWORD"
+          else
+            echo "No IPA file found to upload!"
+            exit 1
+          fi

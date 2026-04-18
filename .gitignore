@@ -18,3 +18,5 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 /google-services.json
+/composeApp/google-services.json
+/composeApp/release/composeApp-release.aab

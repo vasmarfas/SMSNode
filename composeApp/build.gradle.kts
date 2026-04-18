@@ -47,6 +47,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.fragment)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -76,6 +77,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.fragment)
             implementation(libs.ktor.client.android)
             
             // Firebase (Android)

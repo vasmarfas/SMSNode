@@ -133,7 +133,7 @@ compose.desktop {
         mainClass = "com.vasmarfas.smsnode.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg,TargetFormat.Pkg, TargetFormat.Msi,  TargetFormat.Exe, TargetFormat.Deb)
             packageName = "com.vasmarfas.smsnode"
             packageVersion = "1.0.0"
 

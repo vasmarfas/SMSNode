@@ -18,6 +18,7 @@ internal const val EXTRA_OPEN_CHAT_PHONE = "open_chat_phone"
 
 class AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
+    override val isRegistrationEnabled: Boolean = true
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()

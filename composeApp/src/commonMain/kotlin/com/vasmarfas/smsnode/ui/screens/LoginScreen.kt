@@ -158,9 +158,11 @@ fun LoginScreen(
                  Text(stringResource(Res.string.login_btn))
             }
         }
-        Spacer(Modifier.height(12.dp))
-        TextButton(onClick = onNavigateToRegister) {
-            Text(stringResource(Res.string.register_btn))
+        if (getPlatform().isRegistrationEnabled) {
+            Spacer(Modifier.height(12.dp))
+            TextButton(onClick = onNavigateToRegister) {
+                Text(stringResource(Res.string.register_btn))
+            }
         }
     }
 }

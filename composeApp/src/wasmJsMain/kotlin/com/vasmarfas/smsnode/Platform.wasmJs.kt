@@ -10,6 +10,7 @@ import kotlinx.coroutines.*
 
 class WasmPlatform: Platform {
     override val name: String = "Web with Kotlin/Wasm"
+    override val isRegistrationEnabled: Boolean = true
 }
 
 actual fun getPlatform(): Platform = WasmPlatform()

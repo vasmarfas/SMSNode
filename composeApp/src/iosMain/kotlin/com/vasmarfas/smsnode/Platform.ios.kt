@@ -22,6 +22,7 @@ import platform.UserNotifications.UNAuthorizationOptionBadge
 
 class IOSPlatform: Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
+    override val isRegistrationEnabled: Boolean = false
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()

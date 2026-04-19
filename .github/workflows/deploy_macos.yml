@@ -94,10 +94,24 @@ jobs:
           security find-identity -v -p codesigning build.keychain
           
           ./gradlew :composeApp:packagePkg -PmacOsAppStoreRelease=true || {
-            echo "Build failed. Printing jpackage output log..."
-            cat $(find composeApp/build/compose/logs/packagePkg -name "*out.txt" | head -1)
-            echo "Printing jpackage error log..."
-            cat $(find composeApp/build/compose/logs/packagePkg -name "*err.txt" | head -1)
+            echo "===== Build failed. Listing all log files... ====="
+            ls -la composeApp/build/compose/logs/packagePkg/ 2>/dev/null || echo "No packagePkg log directory"
+            echo "===== Standard output log: ====="
+            for f in $(find composeApp/build/compose/logs/packagePkg -name "*out.txt" 2>/dev/null); do
+              echo "----- $f -----"
+              cat "$f"
+            done
+            echo "===== Error log: ====="
+            for f in $(find composeApp/build/compose/logs/packagePkg -name "*err.txt" 2>/dev/null); do
+              echo "----- $f -----"
+              cat "$f"
+            done
+            echo "===== Listing app folder structure ====="
+            find composeApp/build/compose/binaries/main/app -maxdepth 3 2>/dev/null
+            echo "===== Listing tmp packagePkg folder structure ====="
+            find composeApp/build/compose/tmp/packagePkg -maxdepth 3 2>/dev/null
+            echo "===== packagePkg.args.txt content ====="
+            cat composeApp/build/compose/tmp/packagePkg.args.txt 2>/dev/null
             exit 1
           }
 

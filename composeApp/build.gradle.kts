@@ -185,3 +185,7 @@ compose.desktop {
         }
     }
 }
+
+tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
+    freeArgs.add("--verbose")
+}

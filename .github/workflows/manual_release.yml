@@ -196,7 +196,7 @@ jobs:
             security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
           fi
 
-      - name: Build macOS DMG and PKG
+      - name: Build macOS DMG
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
           APP_VERSION_CODE: ${{ github.run_number }}
@@ -204,7 +204,43 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: ./gradlew :composeApp:packageDmg :composeApp:packagePkg
+        run: ./gradlew :composeApp:packageDmg
+
+      - name: Import App Store Certificates for PKG
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
+          MAC_APP_DIST_P12_PASSWORD: ${{ secrets.MAC_APP_DIST_P12_PASSWORD }}
+          MAC_INSTALLER_DIST_P12_BASE64: ${{ secrets.MAC_INSTALLER_DIST_P12_BASE64 }}
+          MAC_INSTALLER_DIST_P12_PASSWORD: ${{ secrets.MAC_INSTALLER_DIST_P12_PASSWORD }}
+        run: |
+          if [ -n "$MAC_APP_DIST_P12_BASE64" ]; then
+            echo "$MAC_APP_DIST_P12_BASE64" | base64 --decode > app.p12
+            security import app.p12 -k build.keychain -P "$MAC_APP_DIST_P12_PASSWORD" -T /usr/bin/codesign
+          fi
+          if [ -n "$MAC_INSTALLER_DIST_P12_BASE64" ]; then
+            echo "$MAC_INSTALLER_DIST_P12_BASE64" | base64 --decode > inst.p12
+            security import inst.p12 -k build.keychain -P "$MAC_INSTALLER_DIST_P12_PASSWORD" -T /usr/bin/productsign
+          fi
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+
+      - name: Build macOS PKG for App Store
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+          APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.MAC_APP_DIST_IDENTITY }}
+        run: |
+          echo "Listing certificates in keychain:"
+          security find-identity -v -p codesigning build.keychain
+          
+          ./gradlew :composeApp:packagePkg -PmacOsAppStoreRelease=true --info || {
+            echo "Build failed. Printing jpackage output log..."
+            cat $(find composeApp/build/compose/logs/packagePkg -name "*out.txt" | head -1)
+            echo "Printing jpackage error log..."
+            cat $(find composeApp/build/compose/logs/packagePkg -name "*err.txt" | head -1)
+            exit 1
+          }
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4

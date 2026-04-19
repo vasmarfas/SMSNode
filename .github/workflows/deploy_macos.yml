@@ -42,7 +42,7 @@ jobs:
             security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
           fi
 
-      - name: Build and Notarize macOS App
+      - name: Build and Notarize macOS DMG
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
           APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.APPLE_DEVELOPER_ID_IDENTITY }}
@@ -50,10 +50,10 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          # Собираем и DMG, и PKG
-          ./gradlew :composeApp:packageDmg :composeApp:packagePkg -PmacOsAppStoreRelease=true
+          # Собираем DMG для прямой раздачи
+          ./gradlew :composeApp:packageDmg
           
-          # Отправка DMG на нотаризацию в Apple (для прямого скачивания)
+          # Отправка DMG на нотаризацию в Apple
           DMG_FILE=$(find composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -n 1)
           if [ -n "$DMG_FILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_ID_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
             echo "Notarizing $DMG_FILE..."
@@ -63,6 +63,33 @@ jobs:
           else
             echo "Notarization skipped: Missing Apple credentials or DMG file."
           fi
+
+      - name: Import App Store Certificates for PKG
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
+          MAC_APP_DIST_P12_PASSWORD: ${{ secrets.MAC_APP_DIST_P12_PASSWORD }}
+          MAC_INSTALLER_DIST_P12_BASE64: ${{ secrets.MAC_INSTALLER_DIST_P12_BASE64 }}
+          MAC_INSTALLER_DIST_P12_PASSWORD: ${{ secrets.MAC_INSTALLER_DIST_P12_PASSWORD }}
+        run: |
+          if [ -n "$MAC_APP_DIST_P12_BASE64" ]; then
+            echo "$MAC_APP_DIST_P12_BASE64" | base64 --decode > app.p12
+            security import app.p12 -k build.keychain -P "$MAC_APP_DIST_P12_PASSWORD" -T /usr/bin/codesign
+          fi
+          if [ -n "$MAC_INSTALLER_DIST_P12_BASE64" ]; then
+            echo "$MAC_INSTALLER_DIST_P12_BASE64" | base64 --decode > inst.p12
+            security import inst.p12 -k build.keychain -P "$MAC_INSTALLER_DIST_P12_PASSWORD" -T /usr/bin/productsign
+          fi
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+
+      - name: Build macOS PKG for App Store
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.MAC_APP_DIST_IDENTITY }}
+        run: |
+          # Собираем PKG для App Store
+          ./gradlew :composeApp:packagePkg -PmacOsAppStoreRelease=true
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4

@@ -140,6 +140,10 @@ compose.desktop {
             macOS {
                 iconFile.set(project.file("icons/logo.png"))
                 bundleID = "com.vasmarfas.smsnode"
+                
+                val isAppStoreRelease = project.hasProperty("macOsAppStoreRelease")
+                appStore = isAppStoreRelease
+                
                 val identity = System.getenv("APPLE_DEVELOPER_ID_IDENTITY")
                 if (!identity.isNullOrBlank()) {
                     signing {
@@ -147,6 +151,22 @@ compose.desktop {
                         this.identity.set(identity)
                     }
                 }
+                
+                if (isAppStoreRelease) {
+                    // Файлы для Mac App Store (вам нужно будет их создать и положить в корень composeApp)
+                    val provFile = project.file("embedded.provisionprofile")
+                    if (provFile.exists()) provisioningProfile.set(provFile)
+                    
+                    val runtimeProvFile = project.file("runtime.provisionprofile")
+                    if (runtimeProvFile.exists()) runtimeProvisioningProfile.set(runtimeProvFile)
+                    
+                    val entFile = project.file("entitlements.plist")
+                    if (entFile.exists()) entitlementsFile.set(entFile)
+                    
+                    val runtimeEntFile = project.file("runtime-entitlements.plist")
+                    if (runtimeEntFile.exists()) runtimeEntitlementsFile.set(runtimeEntFile)
+                }
+
                 val appleId = System.getenv("APPLE_ID")
                 if (!appleId.isNullOrBlank()) {
                     notarization {

@@ -27,6 +27,7 @@ jobs:
       - name: Build Linux Deb/Rpm
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageDeb :composeApp:packageRpm
 
       - name: Upload Linux artifacts

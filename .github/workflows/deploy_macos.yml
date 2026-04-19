@@ -45,6 +45,7 @@ jobs:
       - name: Build and Notarize macOS DMG
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
           APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.APPLE_DEVELOPER_ID_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -86,6 +87,7 @@ jobs:
         if: ${{ inputs.publish_app_store == true }}
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
           APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.MAC_APP_DIST_IDENTITY }}
         run: |
           # Собираем PKG для App Store и выводим логи при ошибке

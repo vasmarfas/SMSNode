@@ -61,6 +61,8 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="SMSNode AppStore Profile" \
             PRODUCT_BUNDLE_IDENTIFIER="com.vasmarfas.smsnode" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            MARKETING_VERSION="${{ inputs.version_name }}" \
             "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
 
       - name: Export IPA

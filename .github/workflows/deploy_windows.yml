@@ -28,6 +28,7 @@ jobs:
       - name: Build MSI
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageMsi
 
       - name: Upload Windows artifacts

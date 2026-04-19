@@ -55,6 +55,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:bundleRelease :composeApp:assembleRelease
 
       - name: Upload Artifacts

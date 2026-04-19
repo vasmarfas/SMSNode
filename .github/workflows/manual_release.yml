@@ -72,6 +72,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:assembleRelease :composeApp:bundleRelease
 
       - name: Upload Android artifacts
@@ -108,6 +109,7 @@ jobs:
       - name: Build MSI
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageMsi
 
       - name: Upload Windows artifacts
@@ -144,6 +146,7 @@ jobs:
       - name: Build Linux Deb/Rpm
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageDeb :composeApp:packageRpm
 
       - name: Upload Linux artifacts
@@ -196,6 +199,7 @@ jobs:
       - name: Build macOS DMG and PKG
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
           APPLE_DEVELOPER_ID_IDENTITY: ${{ secrets.APPLE_DEVELOPER_ID_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -266,7 +270,14 @@ jobs:
             -archivePath $RUNNER_TEMP/iosApp.xcarchive \
             -sdk iphoneos \
             -configuration Release \
-            archive
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="SMSNode AppStore Profile" \
+            PRODUCT_BUNDLE_IDENTIFIER="com.vasmarfas.smsnode" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            MARKETING_VERSION="${{ inputs.version_name }}" \
+            "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
 
       - name: Export IPA
         run: |

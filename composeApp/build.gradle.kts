@@ -105,8 +105,8 @@ android {
         applicationId = "com.vasmarfas.smsnode"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
     }
     packaging {
         resources {
@@ -135,7 +135,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg,TargetFormat.Pkg, TargetFormat.Msi,  TargetFormat.Exe, TargetFormat.Deb)
             packageName = "com.vasmarfas.smsnode"
-            packageVersion = "1.0.0"
+            packageVersion = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
 
             macOS {
                 iconFile.set(project.file("icons/logo.png"))

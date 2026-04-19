@@ -134,7 +134,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg,TargetFormat.Pkg, TargetFormat.Msi,  TargetFormat.Exe, TargetFormat.Deb)
-            packageName = "com.vasmarfas.smsnode"
+            packageName = "SMSNode"
             packageVersion = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
 
             macOS {
@@ -192,9 +192,3 @@ compose.desktop {
     }
 }
 
-tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
-    if (project.hasProperty("macOsAppStoreRelease")) {
-        freeArgs.add("--mac-package-name")
-        freeArgs.add("SMSNode")
-    }
-}

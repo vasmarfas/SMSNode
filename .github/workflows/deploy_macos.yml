@@ -93,7 +93,7 @@ jobs:
           echo "Listing certificates in keychain:"
           security find-identity -v -p codesigning build.keychain
           
-          ./gradlew :composeApp:packagePkg -PmacOsAppStoreRelease=true --info || {
+          ./gradlew :composeApp:packagePkg -PmacOsAppStoreRelease=true || {
             echo "Build failed. Printing jpackage output log..."
             cat $(find composeApp/build/compose/logs/packagePkg -name "*out.txt" | head -1)
             echo "Printing jpackage error log..."

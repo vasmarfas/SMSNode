@@ -146,9 +146,7 @@ compose.desktop {
                 
                 val buildVersion = System.getenv("APP_VERSION_CODE")
                 if (buildVersion != null && buildVersion.isNotBlank()) {
-                    if (!isAppStoreRelease) {
-                        packageBuildVersion = buildVersion
-                    }
+                    packageBuildVersion = buildVersion
                 }
                 
                 val identity = System.getenv("APPLE_DEVELOPER_ID_IDENTITY")
@@ -195,5 +193,8 @@ compose.desktop {
 }
 
 tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>().configureEach {
-    freeArgs.add("--verbose")
+    if (project.hasProperty("macOsAppStoreRelease")) {
+        freeArgs.add("--mac-package-name")
+        freeArgs.add("SMSNode")
+    }
 }

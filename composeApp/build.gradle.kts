@@ -144,6 +144,13 @@ compose.desktop {
                 val isAppStoreRelease = project.hasProperty("macOsAppStoreRelease")
                 appStore = isAppStoreRelease
                 
+                val buildVersion = System.getenv("APP_VERSION_CODE")
+                if (buildVersion != null && buildVersion.isNotBlank()) {
+                    if (!isAppStoreRelease) {
+                        packageBuildVersion = buildVersion
+                    }
+                }
+                
                 val identity = System.getenv("APPLE_DEVELOPER_ID_IDENTITY")
                 if (!identity.isNullOrBlank()) {
                     signing {
@@ -153,6 +160,7 @@ compose.desktop {
                 }
                 
                 if (isAppStoreRelease) {
+                    appStore = true
                     // Файлы для Mac App Store (вам нужно будет их создать и положить в корень composeApp)
                     val provFile = project.file("embedded.provisionprofile")
                     if (provFile.exists()) provisioningProfile.set(provFile)

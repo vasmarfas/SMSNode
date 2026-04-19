@@ -7,6 +7,10 @@ on:
         description: 'App versionName (e.g. 1.0.0)'
         required: true
         default: '1.0.0'
+      publish_app_store:
+        description: 'Publish PKG to Apple App Store'
+        type: boolean
+        default: false
 
 jobs:
   build_macos:
@@ -46,9 +50,10 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          ./gradlew :composeApp:packageDmg
+          # Собираем и DMG, и PKG
+          ./gradlew :composeApp:packageDmg :composeApp:packagePkg -PmacOsAppStoreRelease=true
           
-          # Отправка DMG на нотаризацию в Apple
+          # Отправка DMG на нотаризацию в Apple (для прямого скачивания)
           DMG_FILE=$(find composeApp/build/compose/binaries/main/dmg -name "*.dmg" | head -n 1)
           if [ -n "$DMG_FILE" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_ID_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
             echo "Notarizing $DMG_FILE..."
@@ -63,4 +68,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-release
-          path: composeApp/build/compose/binaries/main/dmg/*.dmg
+          path: |
+            composeApp/build/compose/binaries/main/dmg/*.dmg
+            composeApp/build/compose/binaries/main/pkg/*.pkg
+
+      - name: Upload PKG to App Store Connect
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          PKG_FILE=$(find composeApp/build/compose/binaries/main/pkg -name "*.pkg" | head -n 1)
+          if [ -n "$PKG_FILE" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+            echo "Uploading $PKG_FILE to App Store Connect..."
+            xcrun altool --upload-app -f "$PKG_FILE" -t macos -u "$APPLE_ID" -p "@env:APPLE_APP_SPECIFIC_PASSWORD" --show-progress
+          else
+            echo "No PKG file or Apple App Specific Password found for upload!"
+            exit 1
+          fi

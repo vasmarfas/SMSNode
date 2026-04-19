@@ -85,10 +85,10 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
           IPA_FILE=$(find ${{ runner.temp }}/export -name "*.ipa" | head -n 1)
-          if [ -n "$IPA_FILE" ]; then
+          if [ -n "$IPA_FILE" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
             echo "Uploading $IPA_FILE to App Store Connect..."
-            xcrun altool --upload-app -f "$IPA_FILE" -t ios -u "$APPLE_ID" -p "$APPLE_APP_SPECIFIC_PASSWORD"
+            xcrun altool --upload-app -f "$IPA_FILE" -t ios -u "$APPLE_ID" -p "@env:APPLE_APP_SPECIFIC_PASSWORD"
           else
-            echo "No IPA file found to upload!"
+            echo "No IPA file or Apple App Specific Password found for upload!"
             exit 1
           fi

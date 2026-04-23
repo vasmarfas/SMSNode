@@ -142,7 +142,7 @@ compose.desktop {
         mainClass = "com.vasmarfas.smsnode.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg,TargetFormat.Pkg, TargetFormat.Msi,  TargetFormat.Exe, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Pkg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "SMSNode"
             packageVersion = System.getenv("APP_VERSION_NAME") ?: "1.0.0"
 

@@ -258,6 +258,12 @@ jobs:
     if: ${{ inputs.publish_macos == true }}
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Setup latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -351,6 +357,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Setup latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -674,6 +686,11 @@ jobs:
     needs: [build_macos, build_ios]
     if: ${{ always() && (inputs.publish_macos_app_store == true || inputs.publish_ios_app_store == true) }}
     steps:
+      - name: Setup latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Download macOS Artifacts
         if: ${{ inputs.publish_macos_app_store == true }}
         uses: actions/download-artifact@v4

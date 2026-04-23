@@ -7,6 +7,10 @@ on:
         description: 'App versionName (e.g. 1.0.0)'
         required: true
         default: '1.0.0'
+      publish_macos:
+        description: 'Build macOS version'
+        type: boolean
+        default: true
       publish_app_store:
         description: 'Publish PKG to Apple App Store'
         type: boolean
@@ -16,6 +20,7 @@ jobs:
   build_macos:
     name: Build macOS (DMG/PKG)
     runs-on: macos-latest
+    if: ${{ inputs.publish_macos == true }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 21
@@ -114,6 +119,60 @@ jobs:
             cat composeApp/build/compose/tmp/packagePkg.args.txt 2>/dev/null
             exit 1
           }
+
+      - name: Re-sign App and PKG with App Store Certificates
+        if: ${{ inputs.publish_app_store == true }}
+        env:
+          MAC_APP_DIST_IDENTITY: ${{ secrets.MAC_APP_DIST_IDENTITY }}
+          MAC_INSTALLER_DIST_IDENTITY: ${{ secrets.MAC_INSTALLER_DIST_IDENTITY }}
+        run: |
+          set -e
+          
+          # 1) Находим .app
+          APP_PATH=$(find composeApp/build/compose/binaries/main/app -maxdepth 2 -name "SMSNode.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+              echo "Error: SMSNode.app not found"
+              exit 1
+          fi
+          echo "Found app: $APP_PATH"
+          
+          # 2) Подписываем все вложенные dylib и фреймворки + сам бинарник с энтайтлментами
+          ENTITLEMENTS="$(pwd)/composeApp/entitlements.plist"
+          RUNTIME_ENT="$(pwd)/composeApp/runtime-entitlements.plist"
+          
+          echo "Re-signing nested dylibs/frameworks..."
+          find "$APP_PATH" \( -name "*.dylib" -o -name "*.jnilib" \) | while read -r LIB; do
+              codesign --force --options runtime --timestamp --sign "$MAC_APP_DIST_IDENTITY" --entitlements "$RUNTIME_ENT" "$LIB" || true
+          done
+          
+          echo "Re-signing JVM runtime executables..."
+          find "$APP_PATH/Contents/runtime" -type f -perm +111 | while read -r EXE; do
+              codesign --force --options runtime --timestamp --sign "$MAC_APP_DIST_IDENTITY" --entitlements "$RUNTIME_ENT" "$EXE" || true
+          done
+          
+          echo "Re-signing main app binary..."
+          codesign --force --options runtime --timestamp --sign "$MAC_APP_DIST_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_PATH/Contents/MacOS/SMSNode"
+          
+          echo "Re-signing the app bundle itself..."
+          codesign --force --options runtime --timestamp --sign "$MAC_APP_DIST_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_PATH"
+          
+          # 3) Заново упаковываем .app в .pkg с installer-сертификатом
+          PKG_PATH=$(find composeApp/build/compose/binaries/main/pkg -name "*.pkg" | head -n 1)
+          NEW_PKG_PATH="${PKG_PATH%.pkg}-signed.pkg"
+          
+          echo "Building component PKG..."
+          COMP_PKG=$(mktemp -d)/component.pkg
+          pkgbuild --component "$APP_PATH" --install-location /Applications --identifier com.vasmarfas.smsnode "$COMP_PKG"
+          
+          echo "Building product PKG with installer cert..."
+          productbuild --component "$APP_PATH" /Applications --sign "$MAC_INSTALLER_DIST_IDENTITY" "$NEW_PKG_PATH"
+          
+          # Заменяем оригинальный pkg на подписанный
+          mv "$NEW_PKG_PATH" "$PKG_PATH"
+          echo "Final signed PKG: $PKG_PATH"
+          
+          echo "Verifying PKG signature..."
+          pkgutil --check-signature "$PKG_PATH"
 
 
       - name: Upload macOS artifacts

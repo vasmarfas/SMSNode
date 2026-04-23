@@ -3,6 +3,7 @@ package com.vasmarfas.smsnode
 interface Platform {
     val name: String
     val isRegistrationEnabled: Boolean
+    fun openUrl(url: String)
 }
 
 expect fun getPlatform(): Platform

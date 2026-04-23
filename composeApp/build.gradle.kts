@@ -141,6 +141,13 @@ compose.desktop {
                 iconFile.set(project.file("icons/logo.png"))
                 bundleID = "com.vasmarfas.smsnode"
                 
+                infoPlist {
+                    extraKeysRawXml = """
+                        <key>LSMinimumSystemVersion</key>
+                        <string>12.0</string>
+                    """.trimIndent()
+                }
+                
                 val isAppStoreRelease = project.hasProperty("macOsAppStoreRelease")
                 appStore = isAppStoreRelease
                 

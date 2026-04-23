@@ -123,4 +123,9 @@
     <string name="group_members_title">Состав: %1$s</string>
     <string name="group_mass_send_text">Сообщение будет отправлено всем контактам группы.</string>
     <string name="demo_server_banner">Демо-сервер (Read-only): Изменения не сохраняются</string>
+    <string name="privacy_policy">Политику конфиденциальности</string>
+    <string name="terms_of_use">Условия использования</string>
+    <string name="no_internet_error">Нет интернет-соединения. Проверьте сеть.</string>
+    <string name="server_not_available">Сервер недоступен. Попробуйте позже.</string>
+    <string name="retry">Повторить</string>
 </resources>

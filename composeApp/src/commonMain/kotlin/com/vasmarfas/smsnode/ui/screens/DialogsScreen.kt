@@ -40,6 +40,8 @@ import com.vasmarfas.smsnode.ui.viewmodel.AppViewModel
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
 
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
+
 @Composable
 fun DialogsScreen(
     viewModel: AppViewModel,
@@ -65,153 +67,157 @@ fun DialogsScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface
     ) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(Res.string.dialogs_tab), style = MaterialTheme.typography.titleLarge)
-                Button(onClick = { showNewChatDialog = true }) {
-                    Text(stringResource(Res.string.new_chat))
-                }
-            }
-            LazyRow(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = filterType == "ALL",
-                        onClick = { filterType = "ALL" },
-                        label = { Text(stringResource(Res.string.filter_all)) }
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = filterType == "UNREAD",
-                        onClick = { filterType = "UNREAD" },
-                        label = { Text(stringResource(Res.string.filter_unread)) }
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = filterType == "INCOMING",
-                        onClick = { filterType = "INCOMING" },
-                        label = { Text(stringResource(Res.string.filter_incoming)) }
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = filterType == "OUTGOING",
-                        onClick = { filterType = "OUTGOING" },
-                        label = { Text(stringResource(Res.string.filter_outgoing)) }
-                    )
-                }
-            }
-            if (loading) {
-                Box(
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { viewModel.loadDialogsAndContacts() })
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                Row(
                     Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(Modifier.padding(24.dp))
+                    Text(stringResource(Res.string.dialogs_tab), style = MaterialTheme.typography.titleLarge)
+                    Button(onClick = { showNewChatDialog = true }) {
+                        Text(stringResource(Res.string.new_chat))
+                    }
                 }
-                return@Surface
-            }
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-            ) {
-                if (error != null) {
+                LazyRow(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     item {
-                        Text(
-                            error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(8.dp)
+                        FilterChip(
+                            selected = filterType == "ALL",
+                            onClick = { filterType = "ALL" },
+                            label = { Text(stringResource(Res.string.filter_all)) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterType == "UNREAD",
+                            onClick = { filterType = "UNREAD" },
+                            label = { Text(stringResource(Res.string.filter_unread)) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterType == "INCOMING",
+                            onClick = { filterType = "INCOMING" },
+                            label = { Text(stringResource(Res.string.filter_incoming)) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = filterType == "OUTGOING",
+                            onClick = { filterType = "OUTGOING" },
+                            label = { Text(stringResource(Res.string.filter_outgoing)) }
                         )
                     }
                 }
-                
-                val filteredDialogs = dialogs.filter { d ->
-                    when (filterType) {
-                        "UNREAD" -> (unreadCounts[d.externalPhone] ?: 0) > 0
-                        "INCOMING" -> d.lastDirection == "in"
-                        "OUTGOING" -> d.lastDirection == "out"
-                        else -> true
-                    }
-                }
-
-                items(filteredDialogs) { d ->
-                    Card(
-                        modifier = Modifier
+                if (loading) {
+                    Box(
+                        Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable { onOpenChat(d.externalPhone) }
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        val contact = contacts.firstOrNull { it.phoneNumber == d.externalPhone }
-                        val unread = unreadCounts[d.externalPhone] ?: 0
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
+                        CircularProgressIndicator(Modifier.padding(24.dp))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        if (error != null && error != "NETWORK_ERROR") {
+                            item {
                                 Text(
-                                    contact?.name ?: d.externalPhone,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    error!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(8.dp)
                                 )
-                                if (contact != null) {
-                                    Text(
-                                        d.externalPhone,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Text(
-                                    d.lastText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                                d.lastAt?.let { time ->
-                                    val timeStr = if (time.length >= 16) time.substring(11, 16) else time
-                                    Text(
-                                        timeStr,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-                                }
                             }
+                        }
+                        
+                        val filteredDialogs = dialogs.filter { d ->
+                            when (filterType) {
+                                "UNREAD" -> (unreadCounts[d.externalPhone] ?: 0) > 0
+                                "INCOMING" -> d.lastDirection == "in"
+                                "OUTGOING" -> d.lastDirection == "out"
+                                else -> true
+                            }
+                        }
 
-                            if (unread > 0) {
-                                Box(
+                        items(filteredDialogs) { d ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { onOpenChat(d.externalPhone) }
+                            ) {
+                                val contact = contacts.firstOrNull { it.phoneNumber == d.externalPhone }
+                                val unread = unreadCounts[d.externalPhone] ?: 0
+
+                                Row(
                                     modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = unread.toString(),
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            contact?.name ?: d.externalPhone,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (contact != null) {
+                                            Text(
+                                                d.externalPhone,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Text(
+                                            d.lastText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                        d.lastAt?.let { time ->
+                                            val timeStr = if (time.length >= 16) time.substring(11, 16) else time
+                                            Text(
+                                                timeStr,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    if (unread > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary)
+                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = unread.toString(),
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

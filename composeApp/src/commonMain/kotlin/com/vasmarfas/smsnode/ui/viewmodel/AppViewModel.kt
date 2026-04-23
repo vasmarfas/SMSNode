@@ -84,6 +84,9 @@ class AppViewModel(
     private val _templatesLoading = MutableStateFlow(false)
     val templatesLoading: StateFlow<Boolean> = _templatesLoading.asStateFlow()
 
+    private val _templatesError = MutableStateFlow<String?>(null)
+    val templatesError: StateFlow<String?> = _templatesError.asStateFlow()
+
     init {
         scope.launch {
             SmsNodeEvents.newMessages.collect { msgs ->
@@ -127,7 +130,7 @@ class AppViewModel(
 
             when (val r = api.getDialogs()) {
                 is ApiResult.Success -> _dialogs.value = r.value
-                is ApiResult.NetworkError -> _dialogsError.value = "Нет соединения с сервером. Проверьте адрес и сеть."
+                is ApiResult.NetworkError -> _dialogsError.value = "NETWORK_ERROR"
                 is ApiResult.Forbidden -> _dialogsError.value = r.message
                 is ApiResult.Error -> _dialogsError.value = "Ошибка загрузки: ${r.message}"
                 else -> _dialogsError.value = "Неизвестная ошибка загрузки"
@@ -148,8 +151,10 @@ class AppViewModel(
         if (_templatesLoading.value) return
         scope.launch {
             _templatesLoading.value = true
+            _templatesError.value = null
             when (val r = api.getTemplates()) {
                 is ApiResult.Success -> _templates.value = r.value
+                is ApiResult.NetworkError -> _templatesError.value = "NETWORK_ERROR"
                 else -> { }
             }
             _templatesLoading.value = false
@@ -264,13 +269,13 @@ class AppViewModel(
                             sessionManager.clear()
                             _loginResult.value = LoginResult.Error("Сессия недействительна")
                         }
-                        is ApiResult.NetworkError -> _loginResult.value = LoginResult.Error("Нет соединения с сервером")
+                        is ApiResult.NetworkError -> _loginResult.value = LoginResult.Error("NETWORK_ERROR")
                         else -> _loginResult.value = LoginResult.Error("Ошибка загрузки профиля: ${msgOf(me)}")
                     }
                 }
                 is ApiResult.Unauthorized -> _loginResult.value = LoginResult.Error("Неверный логин или пароль")
                 is ApiResult.Forbidden -> _loginResult.value = LoginResult.Error(r.message)
-                is ApiResult.NetworkError -> _loginResult.value = LoginResult.Error("Нет соединения с сервером")
+                is ApiResult.NetworkError -> _loginResult.value = LoginResult.Error("NETWORK_ERROR")
                 is ApiResult.Error -> _loginResult.value = LoginResult.Error("Ошибка сервера: ${r.message}")
                 else -> _loginResult.value = LoginResult.Error("Неизвестная ошибка входа")
             }
@@ -311,7 +316,7 @@ class AppViewModel(
                 }
                 is ApiResult.Forbidden -> _registerResult.value = RegisterUiResult.Error(r.message)
                 is ApiResult.Conflict -> _registerResult.value = RegisterUiResult.Error(r.message)
-                is ApiResult.NetworkError -> _registerResult.value = RegisterUiResult.Error("Нет соединения с сервером")
+                is ApiResult.NetworkError -> _registerResult.value = RegisterUiResult.Error("NETWORK_ERROR")
                 is ApiResult.Error -> _registerResult.value = RegisterUiResult.Error("Ошибка сервера: ${r.message}")
                 else -> _registerResult.value = RegisterUiResult.Error("Неизвестная ошибка регистрации")
             }

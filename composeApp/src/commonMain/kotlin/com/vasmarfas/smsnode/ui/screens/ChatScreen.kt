@@ -47,12 +47,14 @@ import com.vasmarfas.smsnode.data.models.SimCardResponse
 import com.vasmarfas.smsnode.ui.viewmodel.AppViewModel
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
 
 private data class PendingMessage(
     val localId: Long,
     val text: String,
     val simCardId: Int?,
 )
+
 
 @Composable
 fun ChatScreen(
@@ -71,12 +73,13 @@ fun ChatScreen(
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var refresh by remember { mutableStateOf(0) }
     var showTemplates by remember { mutableStateOf(false) }
     val templates by viewModel.templates.collectAsState()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(phone) {
+    LaunchedEffect(phone, refresh) {
         viewModel.applyStoredToken()
         when (val r = viewModel.api.getDialogMessages(phone)) {
             is ApiResult.Success -> {
@@ -85,49 +88,55 @@ fun ChatScreen(
                 knownMessageIds = newMessages.map { it.id }.toSet()
                 error = null
             }
-            is ApiResult.NetworkError -> error = "Нет соединения с сервером"
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             is ApiResult.Error -> error = "Ошибка: ${r.message}"
             else -> error = "Не удалось загрузить сообщения"
         }
-        when (val r = viewModel.api.getMySims()) {
-            is ApiResult.Success -> {
-                mySims = r.value
-                if (selectedSimId == null && r.value.isNotEmpty())
-                    selectedSimId = r.value.first().id
-            }
-            else -> { }
-        }
-        when (val r = viewModel.api.getContacts()) {
-            is ApiResult.Success -> {
-                contactName = r.value.firstOrNull { it.phoneNumber == phone }?.name
-            }
-            else -> { }
-        }
-        viewModel.loadTemplates()
-        loading = false
-        while (true) {
-            delay(5000)
-            when (val r = viewModel.api.getDialogMessages(phone)) {
+        if (error == null || error != "NETWORK_ERROR") {
+            when (val r = viewModel.api.getMySims()) {
                 is ApiResult.Success -> {
-                    error = null
-                    val prevIds = knownMessageIds
-                    val newMessages = r.value.reversed()
-                    messages = newMessages
-                    knownMessageIds = newMessages.map { it.id }.toSet()
-                    if (pendingMessages.isNotEmpty()) {
-                        val serverOut = newMessages.filter { it.direction == "out" }
-                        pendingMessages = pendingMessages.filter { pending ->
-                            serverOut.none { m ->
-                                m.id !in prevIds &&
-                                    m.externalPhone == phone &&
-                                    m.text == pending.text &&
-                                    m.simCardId == pending.simCardId
+                    mySims = r.value
+                    if (selectedSimId == null && r.value.isNotEmpty())
+                        selectedSimId = r.value.first().id
+                }
+                else -> { }
+            }
+            when (val r = viewModel.api.getContacts()) {
+                is ApiResult.Success -> {
+                    contactName = r.value.firstOrNull { it.phoneNumber == phone }?.name
+                }
+                else -> { }
+            }
+            viewModel.loadTemplates()
+        }
+        loading = false
+        if (error == null) {
+            while (true) {
+                delay(5000)
+                when (val r = viewModel.api.getDialogMessages(phone)) {
+                    is ApiResult.Success -> {
+                        error = null
+                        val prevIds = knownMessageIds
+                        val newMessages = r.value.reversed()
+                        messages = newMessages
+                        knownMessageIds = newMessages.map { it.id }.toSet()
+                        if (pendingMessages.isNotEmpty()) {
+                            val serverOut = newMessages.filter { it.direction == "out" }
+                            pendingMessages = pendingMessages.filter { pending ->
+                                serverOut.none { m ->
+                                    m.id !in prevIds &&
+                                        m.externalPhone == phone &&
+                                        m.text == pending.text &&
+                                        m.simCardId == pending.simCardId
+                                }
                             }
                         }
                     }
+                    is ApiResult.NetworkError -> {
+                        // ignore polling errors to not show full-screen error
+                    }
+                    else -> { }
                 }
-                is ApiResult.NetworkError -> error = "Нет сети (обновление приостановлено)"
-                else -> { }
             }
         }
     }
@@ -138,12 +147,15 @@ fun ChatScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             TextButton(onClick = onBack) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -412,5 +424,6 @@ fun ChatScreen(
             }
         )
     }
+}
 }
 

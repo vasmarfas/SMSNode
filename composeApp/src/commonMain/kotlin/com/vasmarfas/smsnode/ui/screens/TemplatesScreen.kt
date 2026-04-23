@@ -18,10 +18,13 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
 
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
+
 @Composable
 fun TemplatesScreen(viewModel: AppViewModel, isAdmin: Boolean = false) {
     val templates by viewModel.templates.collectAsState()
     val isLoading by viewModel.templatesLoading.collectAsState()
+    val error by viewModel.templatesError.collectAsState()
     val scope = rememberCoroutineScope()
     
     var showAddDialog by remember { mutableStateOf(false) }
@@ -32,41 +35,45 @@ fun TemplatesScreen(viewModel: AppViewModel, isAdmin: Boolean = false) {
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(Res.string.templates_tab), style = MaterialTheme.typography.titleLarge)
-                Button(onClick = { showAddDialog = true }) {
-                    Text(stringResource(Res.string.create))
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { viewModel.loadTemplates() })
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(Res.string.templates_tab), style = MaterialTheme.typography.titleLarge)
+                    Button(onClick = { showAddDialog = true }) {
+                        Text(stringResource(Res.string.create))
+                    }
                 }
-            }
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                if (isLoading && templates.isEmpty()) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                } else if (templates.isEmpty()) {
-                    Text(
-                        text = stringResource(Res.string.no_templates),
-                        modifier = Modifier.align(Alignment.Center),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(templates) { tmpl ->
-                            TemplateItem(
-                                template = tmpl,
-                                isAdmin = isAdmin,
-                                onEdit = { templateToEdit = tmpl },
-                                onDelete = {
-                                    scope.launch { viewModel.deleteTemplate(tmpl.id) }
-                                }
-                            )
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (isLoading && templates.isEmpty()) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    } else if (templates.isEmpty()) {
+                        Text(
+                            text = stringResource(Res.string.no_templates),
+                            modifier = Modifier.align(Alignment.Center),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(templates) { tmpl ->
+                                TemplateItem(
+                                    template = tmpl,
+                                    isAdmin = isAdmin,
+                                    onEdit = { templateToEdit = tmpl },
+                                    onDelete = {
+                                        scope.launch { viewModel.deleteTemplate(tmpl.id) }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

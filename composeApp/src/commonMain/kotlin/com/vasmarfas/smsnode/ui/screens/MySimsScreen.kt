@@ -17,19 +17,24 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
 
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
+
 @Composable
 fun MySimsScreen(viewModel: AppViewModel) {
     var sims by remember { mutableStateOf<List<SimCardResponse>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
     var simToEdit by remember { mutableStateOf<SimCardResponse?>(null) }
     var editLabel by remember { mutableStateOf("") }
+    var refresh by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refresh) {
         viewModel.applyStoredToken()
         when (val r = viewModel.api.getMySims()) {
-            is ApiResult.Success -> sims = r.value
-            else -> { }
+            is ApiResult.Success -> { sims = r.value; error = null }
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
+            else -> error = "Ошибка загрузки"
         }
         loading = false
     }
@@ -41,9 +46,15 @@ fun MySimsScreen(viewModel: AppViewModel) {
         return
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Text(stringResource(Res.string.sims_tab), style = MaterialTheme.typography.titleLarge)
-            if (sims.isEmpty()) {
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Text(stringResource(Res.string.sims_tab), style = MaterialTheme.typography.titleLarge)
+                if (error != null && error != "NETWORK_ERROR") {
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                }
+                if (sims.isEmpty()) {
                 Text(
                     stringResource(Res.string.no_sims_assigned),
                     style = MaterialTheme.typography.bodyMedium,
@@ -77,6 +88,7 @@ fun MySimsScreen(viewModel: AppViewModel) {
             }
         }
     }
+}
 
     simToEdit?.let { s ->
         AlertDialog(

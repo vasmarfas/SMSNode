@@ -27,6 +27,10 @@ on:
         description: 'Publish to Apple App Store'
         type: boolean
         default: false
+      publish_macos:
+        description: 'Build macOS version'
+        type: boolean
+        default: true
 
 jobs:
   build_android:
@@ -161,6 +165,7 @@ jobs:
   build_macos:
     name: Build macOS (DMG)
     runs-on: macos-latest
+    if: ${{ inputs.publish_macos == true }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 21
@@ -377,6 +382,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: all-artifacts
+        continue-on-error: true
+
+      - name: List artifacts (debug)
+        run: ls -R all-artifacts || echo "No artifacts found"
 
       - name: Publish Release
         uses: softprops/action-gh-release@v1
@@ -441,90 +450,137 @@ jobs:
       - name: Find APK
         id: find_apk
         run: |
-          APK_FILE=$(find dist -name "*.apk" | head -n 1)
+          # Предпочитаем release APK
+          APK_FILE=$(find dist -name "*release*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            APK_FILE=$(find dist -name "*.apk" | head -n 1)
+          fi
+          
           if [ -z "$APK_FILE" ]; then
             echo "No APK found!"
             exit 1
           fi
+          echo "Found APK: $APK_FILE"
           echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
 
-      - name: Get RuStore API token (JWE)
+      - name: Publish to RuStore
         env:
           RUSTORE_KEY_ID: ${{ secrets.RUSTORE_KEY_ID }}
           RUSTORE_PRIVATE_KEY: ${{ secrets.RUSTORE_PRIVATE_KEY }}
+          PACKAGE_NAME: ${{ secrets.RUSTORE_PACKAGE_NAME }}
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          APK_PATH: ${{ steps.find_apk.outputs.apk_path }}
         run: |
           if [ -z "$RUSTORE_KEY_ID" ] || [ -z "$RUSTORE_PRIVATE_KEY" ]; then
-            echo "RuStore key id or private key is not set"
+            echo "RuStore secrets (KEY_ID or PRIVATE_KEY) are missing!"
             exit 1
           fi
+          
           python -m pip install --upgrade pip
-          python -m pip install pycryptodome requests
+          python -m pip install pycryptodome requests requests-toolbelt
+          
           python - << 'EOF'
           import os, base64, datetime, json, sys, requests
           from Crypto.PublicKey import RSA
           from Crypto.Signature import pkcs1_15
           from Crypto.Hash import SHA512
+          from requests_toolbelt.multipart.encoder import MultipartEncoder
           
           key_id = os.getenv("RUSTORE_KEY_ID")
           private_key_b64 = os.getenv("RUSTORE_PRIVATE_KEY")
-          github_env = os.getenv("GITHUB_ENV")
-          
-          private_key = RSA.import_key(base64.b64decode(private_key_b64))
-          timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds')
-          message = key_id + timestamp
-          
-          h = SHA512.new(message.encode())
-          signer = pkcs1_15.new(private_key)
-          signature = base64.b64encode(signer.sign(h)).decode()
-          
-          body = {"keyId": key_id, "timestamp": timestamp, "signature": signature}
-          resp = requests.post("https://public-api.rustore.ru/public/auth", headers={"Content-Type": "application/json"}, data=json.dumps(body), timeout=10)
-          data = resp.json()
-          
-          if data.get("code") != "OK":
-            sys.exit(1)
-            
-          with open(github_env, "a", encoding="utf-8") as f:
-            f.write(f"RUSTORE_JWE={data['body']['jwe']}\n")
-          EOF
-
-      - name: Create draft version in RuStore
-        env:
-          RUSTORE_JWE: ${{ env.RUSTORE_JWE }}
-          PACKAGE_NAME: ${{ secrets.RUSTORE_PACKAGE_NAME }}
-          APP_VERSION_NAME: ${{ inputs.version_name }}
-          APK_PATH: ${{ steps.find_apk.outputs.apk_path }}
-        run: |
-          python -m pip install requests requests-toolbelt
-          python - << 'EOF'
-          import os, sys, requests
-          jwe = os.getenv("RUSTORE_JWE")
-          pkg = os.getenv("PACKAGE_NAME")
-          ver = os.getenv("APP_VERSION_NAME")
+          pkg_name = os.getenv("PACKAGE_NAME")
+          version_name = os.getenv("APP_VERSION_NAME")
           apk_path = os.getenv("APK_PATH")
           
-          if not all([jwe, pkg, ver, apk_path]):
-              print("Missing env vars for RuStore publish")
+          # 1. Получение JWE токена
+          try:
+              private_key = RSA.import_key(base64.b64decode(private_key_b64))
+              timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds')
+              message = key_id + timestamp
+              
+              h = SHA512.new(message.encode())
+              signer = pkcs1_15.new(private_key)
+              signature = base64.b64encode(signer.sign(h)).decode()
+              
+              auth_resp = requests.post(
+                  "https://public-api.rustore.ru/public/auth",
+                  json={"keyId": key_id, "timestamp": timestamp, "signature": signature},
+                  timeout=30
+              )
+              auth_data = auth_resp.json()
+              if auth_data.get("code") != "OK":
+                  print(f"RuStore Auth Failed: {auth_data}")
+                  sys.exit(1)
+              
+              jwe = auth_data['body']['jwe']
+              print("RuStore Authentication Successful")
+          except Exception as e:
+              print(f"Error during RuStore Auth: {e}")
               sys.exit(1)
               
+          # 2. Создание версии (Draft)
           headers = {"Public-Token": jwe}
-          url_base = f"https://public-api.rustore.ru/public/v1/application/{pkg}/version"
+          url_base = f"https://public-api.rustore.ru/public/v1/application/{pkg_name}/version"
           
-          resp = requests.post(url_base, headers=headers, json={"versionName": ver})
-          data = resp.json()
-          if data.get("code") != "OK":
-              print("Failed to create RuStore draft", data)
+          try:
+              # Проверяем, нет ли уже открытого черновика
+              draft_resp = requests.get(url_base, headers=headers)
+              draft_data = draft_resp.json()
+              
+              version_id = None
+              if draft_data.get("code") == "OK":
+                  # Если есть черновики, ищем подходящий или используем последний
+                  versions = draft_data.get("body", {}).get("content", [])
+                  for v in versions:
+                      if v.get("versionStatus") == "DRAFT":
+                          version_id = v.get("versionId")
+                          print(f"Using existing draft versionId: {version_id}")
+                          break
+              
+              if not version_id:
+                  print(f"Creating new draft version {version_name}...")
+                  create_resp = requests.post(
+                      url_base,
+                      headers=headers,
+                      json={"versionName": version_name},
+                      timeout=30
+                  )
+                  create_data = create_resp.json()
+                  if create_data.get("code") != "OK":
+                      print(f"Failed to create RuStore draft: {create_data}")
+                      sys.exit(1)
+                  version_id = create_data["body"]
+                  print(f"New draft created versionId: {version_id}")
+          except Exception as e:
+              print(f"Error creating/checking RuStore draft: {e}")
+              sys.exit(1)
+          
+          # 3. Загрузка APK
+          try:
+              print(f"Uploading APK: {os.path.basename(apk_path)}...")
+              with open(apk_path, "rb") as f:
+                  m = MultipartEncoder(fields={
+                      'file': (os.path.basename(apk_path), f, 'application/vnd.android.package-archive')
+                  })
+                  upload_headers = headers.copy()
+                  upload_headers["Content-Type"] = m.content_type
+                  
+                  upload_resp = requests.post(
+                      f"{url_base}/{version_id}/apk?isMainApk=true",
+                      headers=upload_headers,
+                      data=m,
+                      timeout=300
+                  )
+                  upload_data = upload_resp.json()
+                  if upload_data.get("code") != "OK":
+                      print(f"APK Upload Failed: {upload_data}")
+                      sys.exit(1)
+                  print("APK uploaded successfully to RuStore")
+          except Exception as e:
+              print(f"Error uploading APK to RuStore: {e}")
               sys.exit(1)
               
-          version_id = data["body"]
-          print(f"Draft created: {version_id}")
-          
-          from requests_toolbelt.multipart.encoder import MultipartEncoder
-          with open(apk_path, "rb") as f:
-              m = MultipartEncoder(fields={'file': (os.path.basename(apk_path), f, 'application/vnd.android.package-archive')})
-              headers["Content-Type"] = m.content_type
-              upload_resp = requests.post(f"{url_base}/{version_id}/apk", headers=headers, data=m)
-              print("APK Upload:", upload_resp.text)
+          print("RuStore publication (Draft) completed successfully!")
           EOF
 
   publish_ms_store:

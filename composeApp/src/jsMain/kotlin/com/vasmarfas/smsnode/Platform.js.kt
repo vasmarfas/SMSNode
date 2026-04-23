@@ -11,6 +11,10 @@ import kotlin.js.js
 
 class JsPlatform: Platform {
     override val name: String = "Web with Kotlin/JS"
+    override val isRegistrationEnabled: Boolean = true
+    override fun openUrl(url: String) {
+        kotlinx.browser.window.open(url, "_blank")
+    }
 }
 
 actual fun getPlatform(): Platform = JsPlatform()

@@ -123,4 +123,9 @@
     <string name="group_members_title">Members: %1$s</string>
     <string name="group_mass_send_text">The message will be sent to all contacts in the group.</string>
     <string name="demo_server_banner">Demo server (Read-only): Changes are not saved</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_of_use">Terms of Use</string>
+    <string name="no_internet_error">No internet connection. Please check your network.</string>
+    <string name="server_not_available">Server is not responding. Please try again later.</string>
+    <string name="retry">Retry</string>
 </resources>

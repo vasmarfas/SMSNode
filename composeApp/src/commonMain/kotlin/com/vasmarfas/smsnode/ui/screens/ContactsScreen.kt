@@ -53,6 +53,8 @@ import com.vasmarfas.smsnode.ui.viewmodel.AppViewModel
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
 
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
+
 @Composable
 fun ContactsScreen(
     viewModel: AppViewModel,
@@ -87,7 +89,7 @@ fun ContactsScreen(
         viewModel.applyStoredToken()
         when (val r = viewModel.api.getContacts()) {
             is ApiResult.Success -> { contacts = r.value; error = null }
-            is ApiResult.NetworkError -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
     }
@@ -96,7 +98,7 @@ fun ContactsScreen(
         viewModel.applyStoredToken()
         when (val r = viewModel.api.getContactGroups()) {
             is ApiResult.Success -> { groups = r.value; error = null }
-            is ApiResult.NetworkError -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
     }
@@ -123,37 +125,40 @@ fun ContactsScreen(
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(Res.string.contacts_tab), style = MaterialTheme.typography.titleLarge)
-                when (selectedTab) {
-                    0 -> Button(onClick = { showAddContactDialog = true }) { Text(stringResource(Res.string.add)) }
-                    else -> Button(onClick = { showAddGroupDialog = true }) { Text(stringResource(Res.string.create_group)) }
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(Res.string.contacts_tab), style = MaterialTheme.typography.titleLarge)
+                    when (selectedTab) {
+                        0 -> Button(onClick = { showAddContactDialog = true }) { Text(stringResource(Res.string.add)) }
+                        else -> Button(onClick = { showAddGroupDialog = true }) { Text(stringResource(Res.string.create_group)) }
+                    }
                 }
-            }
-            TabRow(selectedTabIndex = selectedTab, modifier = Modifier.fillMaxWidth()) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text(stringResource(Res.string.contacts_tab)) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text(stringResource(Res.string.groups_tab)) }
-                )
-            }
-            if (error != null) {
-                Text(
-                    error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
+                TabRow(selectedTabIndex = selectedTab, modifier = Modifier.fillMaxWidth()) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text(stringResource(Res.string.contacts_tab)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text(stringResource(Res.string.groups_tab)) }
+                    )
+                }
+                if (error != null && error != "NETWORK_ERROR") {
+                    Text(
+                        error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             when (selectedTab) {
                 0 -> {
                     LazyColumn(Modifier.fillMaxSize().padding(8.dp)) {
@@ -607,4 +612,5 @@ fun ContactsScreen(
             dismissButton = { TextButton(onClick = { groupToSend = null }) { Text(stringResource(Res.string.cancel)) } }
         )
     }
+}
 }

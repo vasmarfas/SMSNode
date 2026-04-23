@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -19,6 +20,13 @@ internal const val EXTRA_OPEN_CHAT_PHONE = "open_chat_phone"
 class AndroidPlatform : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
     override val isRegistrationEnabled: Boolean = true
+    override fun openUrl(url: String) {
+        val context = SmsNodeContextHolder.appContext ?: return
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()

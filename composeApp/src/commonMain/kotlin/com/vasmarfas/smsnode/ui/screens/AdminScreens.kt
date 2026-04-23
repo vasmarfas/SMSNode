@@ -60,6 +60,15 @@ import com.vasmarfas.smsnode.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import smsnode.composeapp.generated.resources.*
+import com.vasmarfas.smsnode.ui.components.NetworkErrorView
+
+private val GATEWAY_TYPES = listOf("goip_udp", "goip_http", "skyline")
+private val USER_ROLES = listOf("user", "admin")
+private val REG_MODES = listOf(
+    "open" to "Открытая (свободная)",
+    "closed" to "Закрытая",
+    "semi_open" to "По заявкам"
+)
 
 @Composable
 fun AdminMenuScreen(
@@ -100,13 +109,7 @@ fun AdminMenuScreen(
     }
 }
 
-private val GATEWAY_TYPES = listOf("goip_udp", "goip_http", "skyline")
-private val USER_ROLES = listOf("user", "admin")
-private val REG_MODES = listOf(
-    "open" to "Открытая (свободная)", 
-    "closed" to "Закрытая", 
-    "semi_open" to "По заявкам"
-)
+
 
 @Composable
 fun AdminGatewaysScreen(viewModel: AppViewModel, onBack: () -> Unit, onOpenGatewayDetail: (Int) -> Unit = {}) {
@@ -126,46 +129,51 @@ fun AdminGatewaysScreen(viewModel: AppViewModel, onBack: () -> Unit, onOpenGatew
         when (val r = viewModel.api.getGateways()) {
             is ApiResult.Success -> { list = r.value; error = null }
             is ApiResult.Forbidden -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
         loading = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                        }
+                        Text(stringResource(Res.string.admin_gateways_title), style = MaterialTheme.typography.titleLarge)
                     }
-                    Text(stringResource(Res.string.admin_gateways_title), style = MaterialTheme.typography.titleLarge)
+                    Button(onClick = { showCreate = true }) { Text(stringResource(Res.string.add)) }
                 }
-                Button(onClick = { showCreate = true }) { Text(stringResource(Res.string.add)) }
-            }
-            testResult?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(4.dp)) }
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(list) { g ->
-                        Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(g.name, style = MaterialTheme.typography.titleMedium)
-                                Text("${g.type} @ ${g.host}:${g.port}", style = MaterialTheme.typography.bodySmall)
-                                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    TextButton(onClick = { onOpenGatewayDetail(g.id) }) { Text(stringResource(Res.string.sims_tab)) }
-                                    TextButton(onClick = {
-                                        scope.launch {
-                                            testResult = null
-                                            when (val r = viewModel.api.testGateway(g.id)) {
-                                                is ApiResult.Success -> testResult = if (r.value.online) "Онлайн: ${r.value.detail}" else "Офлайн: ${r.value.detail}"
-                                                else -> testResult = "Ошибка"
+                testResult?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(4.dp)) }
+                if (loading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else {
+                    if (error != null && error != "NETWORK_ERROR") Text(error!!, color = MaterialTheme.colorScheme.error)
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(list) { g ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(g.name, style = MaterialTheme.typography.titleMedium)
+                                    Text("${g.type} @ ${g.host}:${g.port}", style = MaterialTheme.typography.bodySmall)
+                                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(onClick = { onOpenGatewayDetail(g.id) }) { Text(stringResource(Res.string.sims_tab)) }
+                                        TextButton(onClick = {
+                                            scope.launch {
+                                                testResult = null
+                                                when (val r = viewModel.api.testGateway(g.id)) {
+                                                    is ApiResult.Success -> testResult = if (r.value.online) "Онлайн: ${r.value.detail}" else "Офлайн: ${r.value.detail}"
+                                                    else -> testResult = "Ошибка"
+                                                }
                                             }
-                                        }
-                                    }) { Text(stringResource(Res.string.test)) }
-                                    IconButton(onClick = { editGateway = g }) { Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.edit)) }
-                                    IconButton(onClick = { deleteGateway = g }) { Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.delete), tint = MaterialTheme.colorScheme.error) }
+                                        }) { Text(stringResource(Res.string.test)) }
+                                        IconButton(onClick = { editGateway = g }) { Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.edit)) }
+                                        IconButton(onClick = { deleteGateway = g }) { Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.delete), tint = MaterialTheme.colorScheme.error) }
+                                    }
                                 }
                             }
                         }
@@ -331,83 +339,90 @@ fun AdminGatewayDetailScreen(gatewayId: Int, viewModel: AppViewModel, onBack: ()
         viewModel.applyStoredToken()
         loading = true
         when (val r = viewModel.api.getGateway(gatewayId)) {
-            is ApiResult.Success -> gateway = r.value
+            is ApiResult.Success -> { gateway = r.value; error = null }
             is ApiResult.Forbidden -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Шлюз не найден"
         }
-        when (val r = viewModel.api.getGatewaySims(gatewayId)) {
-            is ApiResult.Success -> sims = r.value
-            else -> { }
-        }
-        when (val r = viewModel.api.getDiscoveredSims(10)) {
-            is ApiResult.Success -> discovered = r.value.filter { it.gatewayId == gatewayId }
-            else -> { }
+        if (error == null) {
+            when (val r = viewModel.api.getGatewaySims(gatewayId)) {
+                is ApiResult.Success -> sims = r.value
+                else -> { }
+            }
+            when (val r = viewModel.api.getDiscoveredSims(10)) {
+                is ApiResult.Success -> discovered = r.value.filter { it.gatewayId == gatewayId }
+                else -> { }
+            }
         }
         loading = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
-                    }
-                    Text(gateway?.name ?: "Gateway #$gatewayId", style = MaterialTheme.typography.titleLarge)
-                }
-            }
-            gateway?.let { g ->
-                Text("${g.type} @ ${g.host}:${g.port}", style = MaterialTheme.typography.bodyMedium)
-                testResult?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(4.dp)) }
-                Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = {
-                        scope.launch {
-                            testResult = null
-                            when (val r = viewModel.api.testGateway(g.id)) {
-                                is ApiResult.Success -> testResult = if (r.value.online) "Онлайн: ${r.value.detail}" else "Офлайн: ${r.value.detail}"
-                                else -> testResult = "Ошибка"
-                            }
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                         }
-                    }) { Text(stringResource(Res.string.test)) }
-                    IconButton(onClick = { editGateway = g }) { Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.edit)) }
-                    IconButton(onClick = { deleteGateway = g }) { Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.delete), tint = MaterialTheme.colorScheme.error) }
+                        Text(gateway?.name ?: "Gateway #$gatewayId", style = MaterialTheme.typography.titleLarge)
+                    }
                 }
-            }
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Text(stringResource(Res.string.gateway_sims), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-                Button(onClick = { showAddSim = true }, modifier = Modifier.padding(vertical = 4.dp)) { Text(stringResource(Res.string.add_sim)) }
-                LazyColumn(Modifier.weight(1f)) {
-                    items(sims) { sim ->
-                        Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                val simTitle = if (!sim.label.isNullOrBlank()) "${sim.label} (${sim.phoneNumber ?: "—"})" else sim.phoneNumber ?: "—"
-                                Text(stringResource(Res.string.port_num, sim.portNumber.toString()) + " — $simTitle (${sim.status})", style = MaterialTheme.typography.bodyMedium)
-                                if (sim.assignedUserId != null) Text("→ user ${sim.assignedUserId}", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-                    item {
-                        Text(stringResource(Res.string.discovered_channels), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
-                    }
-                    items(discovered) { ch ->
-                        Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Column {
-                                    Text(stringResource(Res.string.port_num, ch.portNumber.toString()) + " — ${ch.phoneNumber ?: "—"}", style = MaterialTheme.typography.bodyMedium)
-                                    ch.gsmStatus?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+                gateway?.let { g ->
+                    Text("${g.type} @ ${g.host}:${g.port}", style = MaterialTheme.typography.bodyMedium)
+                    testResult?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(4.dp)) }
+                    Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = {
+                            scope.launch {
+                                testResult = null
+                                when (val r = viewModel.api.testGateway(g.id)) {
+                                    is ApiResult.Success -> testResult = if (r.value.online) "Онлайн: ${r.value.detail}" else "Офлайн: ${r.value.detail}"
+                                    else -> testResult = "Ошибка"
                                 }
-                                if (ch.canAdd) {
-                                    TextButton(onClick = {
-                                        scope.launch {
-                                            when (viewModel.api.addDiscoveredSim(DiscoveredSimAddRequest(gatewayId, ch.portNumber, ch.phoneNumber))) {
-                                                is ApiResult.Success -> refresh++
-                                                else -> { }
+                            }
+                        }) { Text(stringResource(Res.string.test)) }
+                        IconButton(onClick = { editGateway = g }) { Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.edit)) }
+                        IconButton(onClick = { deleteGateway = g }) { Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.delete), tint = MaterialTheme.colorScheme.error) }
+                    }
+                }
+                if (loading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else {
+                    if (error != null && error != "NETWORK_ERROR") Text(error!!, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.gateway_sims), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+                    Button(onClick = { showAddSim = true }, modifier = Modifier.padding(vertical = 4.dp)) { Text(stringResource(Res.string.add_sim)) }
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(sims) { sim ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    val simTitle = if (!sim.label.isNullOrBlank()) "${sim.label} (${sim.phoneNumber ?: "—"})" else sim.phoneNumber ?: "—"
+                                    Text(stringResource(Res.string.port_num, sim.portNumber.toString()) + " — $simTitle (${sim.status})", style = MaterialTheme.typography.bodyMedium)
+                                    if (sim.assignedUserId != null) Text("→ user ${sim.assignedUserId}", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                        item {
+                            Text(stringResource(Res.string.discovered_channels), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+                        }
+                        items(discovered) { ch ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column {
+                                        Text(stringResource(Res.string.port_num, ch.portNumber.toString()) + " — ${ch.phoneNumber ?: "—"}", style = MaterialTheme.typography.bodyMedium)
+                                        ch.gsmStatus?.let { Text(it, style = MaterialTheme.typography.labelSmall) }
+                                    }
+                                    if (ch.canAdd) {
+                                        TextButton(onClick = {
+                                            scope.launch {
+                                                when (viewModel.api.addDiscoveredSim(DiscoveredSimAddRequest(gatewayId, ch.portNumber, ch.phoneNumber))) {
+                                                    is ApiResult.Success -> refresh++
+                                                    else -> { }
+                                                }
                                             }
-                                        }
-                                    }) { Text(stringResource(Res.string.add)) }
+                                        }) { Text(stringResource(Res.string.add)) }
+                                    }
                                 }
                             }
                         }
@@ -851,51 +866,56 @@ fun AdminPendingScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         when (val r = viewModel.api.getPendingRegistrations()) {
             is ApiResult.Success -> { list = r.value; error = null }
             is ApiResult.Forbidden -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
         loading = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                        }
+                        Text(stringResource(Res.string.admin_pending_title), style = MaterialTheme.typography.titleLarge)
                     }
-                    Text(stringResource(Res.string.admin_pending_title), style = MaterialTheme.typography.titleLarge)
                 }
-            }
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
-                if (list.isEmpty()) Text(stringResource(Res.string.no_pending_requests), modifier = Modifier.padding(8.dp))
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(list) { p ->
-                        Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Column {
-                                    Text("${p.username} (${p.source})", style = MaterialTheme.typography.titleMedium)
-                                    Text("id=${p.id} ${p.createdAt}", style = MaterialTheme.typography.bodySmall)
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = {
-                                        scope.launch {
-                                            when (viewModel.api.approvePendingRegistration(p.id)) {
-                                                is ApiResult.Success -> refresh++
-                                                else -> { }
+                if (loading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else {
+                    if (error != null && error != "NETWORK_ERROR") Text(error!!, color = MaterialTheme.colorScheme.error)
+                    if (list.isEmpty()) Text(stringResource(Res.string.no_pending_requests), modifier = Modifier.padding(8.dp))
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(list) { p ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column {
+                                        Text("${p.username} (${p.source})", style = MaterialTheme.typography.titleMedium)
+                                        Text("id=${p.id} ${p.createdAt}", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(onClick = {
+                                            scope.launch {
+                                                when (viewModel.api.approvePendingRegistration(p.id)) {
+                                                    is ApiResult.Success -> refresh++
+                                                    else -> { }
+                                                }
                                             }
-                                        }
-                                    }) { Text(stringResource(Res.string.approve)) }
-                                    OutlinedButton(onClick = {
-                                        scope.launch {
-                                            when (viewModel.api.rejectPendingRegistration(p.id)) {
-                                                is ApiResult.Success -> refresh++
-                                                else -> { }
+                                        }) { Text(stringResource(Res.string.approve)) }
+                                        OutlinedButton(onClick = {
+                                            scope.launch {
+                                                when (viewModel.api.rejectPendingRegistration(p.id)) {
+                                                    is ApiResult.Success -> refresh++
+                                                    else -> { }
+                                                }
                                             }
-                                        }
-                                    }) { Text(stringResource(Res.string.reject)) }
+                                        }) { Text(stringResource(Res.string.reject)) }
+                                    }
                                 }
                             }
                         }
@@ -919,42 +939,47 @@ fun AdminRegModeScreen(viewModel: AppViewModel, onBack: () -> Unit) {
         when (val r = viewModel.api.getRegistrationMode()) {
             is ApiResult.Success -> { mode = r.value.mode; error = null }
             is ApiResult.Forbidden -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
         loading = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                        }
+                        Text(stringResource(Res.string.admin_regmode_title), style = MaterialTheme.typography.titleLarge)
                     }
-                    Text(stringResource(Res.string.admin_regmode_title), style = MaterialTheme.typography.titleLarge)
                 }
-            }
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
-                mode?.let { 
-                    val humanMode = REG_MODES.find { m -> m.first == it }?.second ?: it
-                    Text(stringResource(Res.string.current_mode, humanMode), modifier = Modifier.padding(8.dp)) 
-                }
-                Column(Modifier.padding(8.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    REG_MODES.forEach { (mId, mDesc) ->
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                scope.launch {
-                                    when (viewModel.api.setRegistrationMode(mId)) {
-                                        is ApiResult.Success -> refresh++
-                                        else -> { }
+                if (loading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else {
+                    if (error != null && error != "NETWORK_ERROR") Text(error!!, color = MaterialTheme.colorScheme.error)
+                    mode?.let {
+                        val humanMode = REG_MODES.find { m -> m.first == it }?.second ?: it
+                        Text(stringResource(Res.string.current_mode, humanMode), modifier = Modifier.padding(8.dp))
+                    }
+                    Column(Modifier.padding(8.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        REG_MODES.forEach { (mId, mDesc) ->
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    scope.launch {
+                                        when (viewModel.api.setRegistrationMode(mId)) {
+                                            is ApiResult.Success -> refresh++
+                                            else -> { }
+                                        }
                                     }
                                 }
-                            }
-                        ) { Text(mDesc) }
+                            ) { Text(mDesc) }
+                        }
                     }
                 }
             }
@@ -967,47 +992,54 @@ fun AdminMessagesScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     var list by remember { mutableStateOf<List<AdminMessageResponse>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    var refresh by remember { mutableStateOf(0) }
+
+    LaunchedEffect(refresh) {
         viewModel.applyStoredToken()
         when (val r = viewModel.api.getAdminMessages(limit = 100)) {
             is ApiResult.Success -> { list = r.value; error = null }
             is ApiResult.Forbidden -> error = r.message
+            is ApiResult.NetworkError -> error = "NETWORK_ERROR"
             else -> error = "Ошибка загрузки"
         }
         loading = false
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+        if (error == "NETWORK_ERROR") {
+            NetworkErrorView(onRetry = { refresh++ })
+        } else {
+            Column(Modifier.fillMaxSize().padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                        }
+                        Text(stringResource(Res.string.admin_messages_title), style = MaterialTheme.typography.titleLarge)
                     }
-                    Text(stringResource(Res.string.admin_messages_title), style = MaterialTheme.typography.titleLarge)
                 }
-            }
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            } else {
-                if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
-                LazyColumn(Modifier.fillMaxSize()) {
-                    items(list) { m ->
-                        Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Column(Modifier.padding(12.dp)) {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(
-                                        text = if (m.direction == "in") "Входящее: ${m.externalPhone}" else "Исходящее: ${m.externalPhone}",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = if (m.direction == "in") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                    )
-                                    if (m.createdAt != null) {
-                                        Text(m.createdAt.take(19).replace("T", " "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (loading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else {
+                    if (error != null && error != "NETWORK_ERROR") Text(error!!, color = MaterialTheme.colorScheme.error)
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(list) { m ->
+                            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(
+                                            text = if (m.direction == "in") "Входящее: ${m.externalPhone}" else "Исходящее: ${m.externalPhone}",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = if (m.direction == "in") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                        )
+                                        if (m.createdAt != null) {
+                                            Text(m.createdAt.take(19).replace("T", " "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("User: ${m.username ?: "—"} | SIM: ${m.simCardLabel ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(m.text, style = MaterialTheme.typography.bodyMedium, maxLines = 3)
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                Text("User: ${m.username ?: "—"} | SIM: ${m.simCardLabel ?: "—"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(8.dp))
-                                Text(m.text, style = MaterialTheme.typography.bodyMedium, maxLines = 3)
                             }
                         }
                     }

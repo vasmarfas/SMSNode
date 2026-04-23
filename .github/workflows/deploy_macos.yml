@@ -11,7 +11,7 @@ on:
         description: 'Build macOS version'
         type: boolean
         default: true
-      publish_app_store:
+      publish_macos_app_store:
         description: 'Publish PKG to Apple App Store'
         type: boolean
         default: false
@@ -71,7 +71,7 @@ jobs:
           fi
 
       - name: Import App Store Certificates for PKG
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
           MAC_APP_DIST_P12_PASSWORD: ${{ secrets.MAC_APP_DIST_P12_PASSWORD }}
@@ -89,7 +89,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
       - name: Build macOS PKG for App Store
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
           APP_VERSION_CODE: ${{ github.run_number }}
@@ -121,7 +121,7 @@ jobs:
           }
 
       - name: Re-sign App and PKG with App Store Certificates
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           MAC_APP_DIST_IDENTITY: ${{ secrets.MAC_APP_DIST_IDENTITY }}
           MAC_INSTALLER_DIST_IDENTITY: ${{ secrets.MAC_INSTALLER_DIST_IDENTITY }}
@@ -184,7 +184,7 @@ jobs:
             composeApp/build/compose/binaries/main/pkg/*.pkg
 
       - name: Upload PKG to App Store Connect
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}

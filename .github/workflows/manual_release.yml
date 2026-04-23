@@ -19,12 +19,12 @@ on:
         description: 'Publish to RuStore (Draft)'
         type: boolean
         default: false
-      publish_ms_store:
-        description: 'Publish to Microsoft Store'
+      publish_macos_app_store:
+        description: 'Publish macOS to Apple App Store'
         type: boolean
         default: false
-      publish_app_store:
-        description: 'Publish to Apple App Store'
+      publish_ios_app_store:
+        description: 'Publish iOS to Apple App Store'
         type: boolean
         default: false
       publish_macos:
@@ -116,12 +116,102 @@ jobs:
           APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageMsi
 
+      - name: Build App Image for MSIX
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew :composeApp:createDistributable
+
+      - name: Package MSIX
+        shell: pwsh
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          MS_STORE_IDENTITY_NAME: ${{ secrets.MS_STORE_IDENTITY_NAME }}
+          MS_STORE_PUBLISHER: ${{ secrets.MS_STORE_PUBLISHER }}
+          MS_STORE_PUBLISHER_DISPLAY_NAME: ${{ secrets.MS_STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          $appDir = "composeApp/build/compose/binaries/main/app/SMSNode"
+          if (-not (Test-Path $appDir)) { Write-Error "App dir not found"; exit 1 }
+
+          $versionName = $env:APP_VERSION_NAME
+          $versionParts = $versionName.Split('.')
+          $outParts = @()
+          for ($i=0; $i -lt 4; $i++) {
+            if ($i -lt $versionParts.Length) { $outParts += $versionParts[$i] } else { $outParts += "0" }
+          }
+          $appxVersion = $outParts -join "."
+
+          $identityName = if ($env:MS_STORE_IDENTITY_NAME) { $env:MS_STORE_IDENTITY_NAME } else { "SMSNode" }
+          $publisher = if ($env:MS_STORE_PUBLISHER) { $env:MS_STORE_PUBLISHER } else { "CN=Vasilii" }
+          $pubDisplayName = if ($env:MS_STORE_PUBLISHER_DISPLAY_NAME) { $env:MS_STORE_PUBLISHER_DISPLAY_NAME } else { "Vasmarfas" }
+
+          $manifest = @"
+          <?xml version=`"1.0`" encoding=`"utf-8`"?>
+          <Package xmlns=`"http://schemas.microsoft.com/appx/manifest/foundation/windows10`"
+                   xmlns:uap=`"http://schemas.microsoft.com/appx/manifest/uap/windows10`"
+                   xmlns:rescap=`"http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities`"
+                   IgnorableNamespaces=`"uap rescap`">
+            <Identity Name=`"$identityName`" Publisher=`"$publisher`" Version=`"$appxVersion`" ProcessorArchitecture=`"x64`" />
+            <Properties>
+              <DisplayName>SMSNode</DisplayName>
+              <PublisherDisplayName>$pubDisplayName</PublisherDisplayName>
+              <Logo>Assets\StoreLogo.png</Logo>
+            </Properties>
+            <Resources>
+              <Resource Language=`"en-US`" />
+            </Resources>
+            <Dependencies>
+              <TargetDeviceFamily Name=`"Windows.Desktop`" MinVersion=`"10.0.17763.0`" MaxVersionTested=`"10.0.22621.0`" />
+            </Dependencies>
+            <Capabilities>
+              <rescap:Capability Name=`"runFullTrust`" />
+            </Capabilities>
+            <Applications>
+              <Application Id=`"SMSNode`" Executable=`"SMSNode.exe`" EntryPoint=`"Windows.FullTrustApplication`">
+                <uap:VisualElements DisplayName=`"SMSNode`" Description=`"SMSNode Application`" BackgroundColor=`"transparent`"
+                                    Square150x150Logo=`"Assets\Square150x150Logo.png`" Square44x44Logo=`"Assets\Square44x44Logo.png`">
+                  <uap:DefaultTile Wide310x150Logo=`"Assets\Wide310x150Logo.png`" />
+                </uap:VisualElements>
+              </Application>
+            </Applications>
+          </Package>
+          "@
+          Set-Content -Path "$appDir\AppxManifest.xml" -Value $manifest -Encoding UTF8
+
+          New-Item -ItemType Directory -Force -Path "$appDir\Assets" | Out-Null
+          
+          Add-Type -AssemblyName System.Drawing
+          $img = [System.Drawing.Image]::FromFile("$PWD\composeApp\icons\logo.png")
+          
+          function Resize-Image($src, $w, $h, $dest) {
+             $bmp = New-Object System.Drawing.Bitmap($w, $h)
+             $g = [System.Drawing.Graphics]::FromImage($bmp)
+             $g.DrawImage($src, 0, 0, $w, $h)
+             $g.Dispose()
+             $bmp.Save($dest, [System.Drawing.Imaging.ImageFormat]::Png)
+             $bmp.Dispose()
+          }
+          Resize-Image $img 50 50 "$appDir\Assets\StoreLogo.png"
+          Resize-Image $img 150 150 "$appDir\Assets\Square150x150Logo.png"
+          Resize-Image $img 44 44 "$appDir\Assets\Square44x44Logo.png"
+          Resize-Image $img 310 150 "$appDir\Assets\Wide310x150Logo.png"
+          $img.Dispose()
+
+          $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "makeappx.exe" | Where-Object { $_.DirectoryName -match "x64" } | Select-Object -First 1
+          if (-not $makeappx) { Write-Error "makeappx.exe not found"; exit 1 }
+
+          New-Item -ItemType Directory -Force -Path "composeApp/build/compose/binaries/main/msix" | Out-Null
+          $msixOut = "$PWD\composeApp\build\compose\binaries\main\msix\SMSNode-$versionName.msix"
+          & $makeappx.FullName pack /d $appDir /p $msixOut /o
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
           if-no-files-found: warn
-          path: composeApp/build/compose/binaries/main/msi/*.msi
+          path: |
+            composeApp/build/compose/binaries/main/msi/*.msi
+            composeApp/build/compose/binaries/main/msix/*.msix
 
   build_linux:
     name: Build Linux (DEB/RPM)
@@ -212,7 +302,7 @@ jobs:
         run: ./gradlew :composeApp:packageDmg
 
       - name: Import App Store Certificates for PKG
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           MAC_APP_DIST_P12_BASE64: ${{ secrets.MAC_APP_DIST_P12_BASE64 }}
           MAC_APP_DIST_P12_PASSWORD: ${{ secrets.MAC_APP_DIST_P12_PASSWORD }}
@@ -230,7 +320,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
       - name: Build macOS PKG for App Store
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           APP_VERSION_NAME: ${{ inputs.version_name }}
           APP_VERSION_CODE: ${{ github.run_number }}
@@ -399,7 +489,6 @@ jobs:
             all-artifacts/windows-release/*
             all-artifacts/linux-release/*
             all-artifacts/macos-release/*
-            all-artifacts/ios-release/*
             all-artifacts/wasm-release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -583,59 +672,51 @@ jobs:
           print("RuStore publication (Draft) completed successfully!")
           EOF
 
-  publish_ms_store:
-    name: Publish to MS Store
-    runs-on: windows-latest
-    needs: build_windows
-    if: ${{ inputs.publish_ms_store == true }}
-    steps:
-      - name: Download Windows Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-release
-          path: dist
-      - name: Find MSIX
-        id: find_msix
-        shell: pwsh
-        run: |
-          $msix = Get-ChildItem -Path dist -Recurse -Filter "*.msix" | Select-Object -First 1
-          if (-not $msix) {
-            Write-Error "No MSIX found! The Microsoft Store action requires an MSIX package."
-            exit 1
-          }
-          echo "msix_path=$($msix.FullName)" >> $env:GITHUB_OUTPUT
-      - name: Publish to Microsoft Store
-        uses: microsoft/action-store-publish@v3
-        with:
-          tenant-id: ${{ secrets.MS_STORE_TENANT_ID }}
-          client-id: ${{ secrets.MS_STORE_CLIENT_ID }}
-          client-secret: ${{ secrets.MS_STORE_CLIENT_SECRET }}
-          app-id: ${{ secrets.MS_STORE_APP_ID }}
-          package-path: ${{ steps.find_msix.outputs.msix_path }}
-
-  publish_app_store:
+  publish_to_app_stores:
     name: Publish to App Store
     runs-on: macos-latest
-    needs: build_macos
-    if: ${{ inputs.publish_app_store == true }}
+    needs: [build_macos, build_ios]
+    if: ${{ always() && (inputs.publish_macos_app_store == true || inputs.publish_ios_app_store == true) }}
     steps:
       - name: Download macOS Artifacts
+        if: ${{ inputs.publish_macos_app_store == true }}
         uses: actions/download-artifact@v4
         with:
           name: macos-release
-          path: dist
-      - name: Find PKG
-        id: find_pkg
-        run: |
-          PKG_FILE=$(find dist -name "*.pkg" | head -n 1)
-          if [ -z "$PKG_FILE" ]; then
-            echo "No PKG found! App Store Connect requires a .pkg file, not .dmg."
-            exit 1
-          fi
-          echo "pkg_path=$PKG_FILE" >> $GITHUB_OUTPUT
-      - name: Upload to App Store Connect
+          path: dist-macos
+        continue-on-error: true
+      - name: Download iOS Artifacts
+        if: ${{ inputs.publish_ios_app_store == true }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-release
+          path: dist-ios
+        continue-on-error: true
+      
+      - name: Upload macOS PKG to App Store Connect
+        if: ${{ inputs.publish_macos_app_store == true }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          xcrun altool --upload-app -f "${{ steps.find_pkg.outputs.pkg_path }}" -t macos -u "$APPLE_ID" -p "$APPLE_APP_SPECIFIC_PASSWORD"
+          PKG_FILE=$(find dist-macos -name "*.pkg" | head -n 1)
+          if [ -n "$PKG_FILE" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+            echo "Uploading $PKG_FILE to App Store Connect..."
+            xcrun altool --upload-app -f "$PKG_FILE" -t macos -u "$APPLE_ID" -p "@env:APPLE_APP_SPECIFIC_PASSWORD" || echo "Failed to upload macOS app"
+          else
+            echo "No macOS PKG found or no password provided! Skipping macOS upload."
+          fi
+          
+      - name: Upload iOS IPA to App Store Connect
+        if: ${{ inputs.publish_ios_app_store == true }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          IPA_FILE=$(find dist-ios -name "*.ipa" | head -n 1)
+          if [ -n "$IPA_FILE" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+            echo "Uploading $IPA_FILE to App Store Connect..."
+            xcrun altool --upload-app -f "$IPA_FILE" -t ios -u "$APPLE_ID" -p "@env:APPLE_APP_SPECIFIC_PASSWORD" || echo "Failed to upload iOS app"
+          else
+            echo "No iOS IPA found or no password provided! Skipping iOS upload."
+          fi

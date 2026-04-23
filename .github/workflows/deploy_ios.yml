@@ -7,8 +7,8 @@ on:
         description: 'App versionName (e.g. 1.0.0)'
         required: true
         default: '1.0.0'
-      publish_app_store:
-        description: 'Publish to Apple App Store'
+      publish_ios_app_store:
+        description: 'Publish iOS to Apple App Store'
         type: boolean
         default: false
 
@@ -81,7 +81,7 @@ jobs:
           path: ${{ runner.temp }}/export/*.ipa
 
       - name: Upload to App Store Connect
-        if: ${{ inputs.publish_app_store == true }}
+        if: ${{ inputs.publish_ios_app_store == true }}
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}

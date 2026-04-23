@@ -7,10 +7,6 @@ on:
         description: 'App versionName (e.g. 1.0.0)'
         required: true
         default: '1.0.0'
-      publish_ms_store:
-        description: 'Publish to Microsoft Store'
-        type: boolean
-        default: false
 
 jobs:
   build_windows:
@@ -31,18 +27,102 @@ jobs:
           APP_VERSION_CODE: ${{ github.run_number }}
         run: ./gradlew :composeApp:packageMsi
 
+      - name: Build App Image for MSIX
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew :composeApp:createDistributable
+
+      - name: Package MSIX
+        shell: pwsh
+        env:
+          APP_VERSION_NAME: ${{ inputs.version_name }}
+          MS_STORE_IDENTITY_NAME: ${{ secrets.MS_STORE_IDENTITY_NAME }}
+          MS_STORE_PUBLISHER: ${{ secrets.MS_STORE_PUBLISHER }}
+          MS_STORE_PUBLISHER_DISPLAY_NAME: ${{ secrets.MS_STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          $appDir = "composeApp/build/compose/binaries/main/app/SMSNode"
+          if (-not (Test-Path $appDir)) { Write-Error "App dir not found"; exit 1 }
+
+          $versionName = $env:APP_VERSION_NAME
+          $versionParts = $versionName.Split('.')
+          $outParts = @()
+          for ($i=0; $i -lt 4; $i++) {
+            if ($i -lt $versionParts.Length) { $outParts += $versionParts[$i] } else { $outParts += "0" }
+          }
+          $appxVersion = $outParts -join "."
+
+          $identityName = if ($env:MS_STORE_IDENTITY_NAME) { $env:MS_STORE_IDENTITY_NAME } else { "SMSNode" }
+          $publisher = if ($env:MS_STORE_PUBLISHER) { $env:MS_STORE_PUBLISHER } else { "CN=Vasilii" }
+          $pubDisplayName = if ($env:MS_STORE_PUBLISHER_DISPLAY_NAME) { $env:MS_STORE_PUBLISHER_DISPLAY_NAME } else { "Vasmarfas" }
+
+          $manifest = @"
+          <?xml version=`"1.0`" encoding=`"utf-8`"?>
+          <Package xmlns=`"http://schemas.microsoft.com/appx/manifest/foundation/windows10`"
+                   xmlns:uap=`"http://schemas.microsoft.com/appx/manifest/uap/windows10`"
+                   xmlns:rescap=`"http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities`"
+                   IgnorableNamespaces=`"uap rescap`">
+            <Identity Name=`"$identityName`" Publisher=`"$publisher`" Version=`"$appxVersion`" ProcessorArchitecture=`"x64`" />
+            <Properties>
+              <DisplayName>SMSNode</DisplayName>
+              <PublisherDisplayName>$pubDisplayName</PublisherDisplayName>
+              <Logo>Assets\StoreLogo.png</Logo>
+            </Properties>
+            <Resources>
+              <Resource Language=`"en-US`" />
+            </Resources>
+            <Dependencies>
+              <TargetDeviceFamily Name=`"Windows.Desktop`" MinVersion=`"10.0.17763.0`" MaxVersionTested=`"10.0.22621.0`" />
+            </Dependencies>
+            <Capabilities>
+              <rescap:Capability Name=`"runFullTrust`" />
+            </Capabilities>
+            <Applications>
+              <Application Id=`"SMSNode`" Executable=`"SMSNode.exe`" EntryPoint=`"Windows.FullTrustApplication`">
+                <uap:VisualElements DisplayName=`"SMSNode`" Description=`"SMSNode Application`" BackgroundColor=`"transparent`"
+                                    Square150x150Logo=`"Assets\Square150x150Logo.png`" Square44x44Logo=`"Assets\Square44x44Logo.png`">
+                  <uap:DefaultTile Wide310x150Logo=`"Assets\Wide310x150Logo.png`" />
+                </uap:VisualElements>
+              </Application>
+            </Applications>
+          </Package>
+          "@
+          Set-Content -Path "$appDir\AppxManifest.xml" -Value $manifest -Encoding UTF8
+
+          New-Item -ItemType Directory -Force -Path "$appDir\Assets" | Out-Null
+          
+          Add-Type -AssemblyName System.Drawing
+          $img = [System.Drawing.Image]::FromFile("$PWD\composeApp\icons\logo.png")
+          
+          function Resize-Image($src, $w, $h, $dest) {
+             $bmp = New-Object System.Drawing.Bitmap($w, $h)
+             $g = [System.Drawing.Graphics]::FromImage($bmp)
+             $g.DrawImage($src, 0, 0, $w, $h)
+             $g.Dispose()
+             $bmp.Save($dest, [System.Drawing.Imaging.ImageFormat]::Png)
+             $bmp.Dispose()
+          }
+          Resize-Image $img 50 50 "$appDir\Assets\StoreLogo.png"
+          Resize-Image $img 150 150 "$appDir\Assets\Square150x150Logo.png"
+          Resize-Image $img 44 44 "$appDir\Assets\Square44x44Logo.png"
+          Resize-Image $img 310 150 "$appDir\Assets\Wide310x150Logo.png"
+          $img.Dispose()
+
+          $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "makeappx.exe" | Where-Object { $_.DirectoryName -match "x64" } | Select-Object -First 1
+          if (-not $makeappx) { Write-Error "makeappx.exe not found"; exit 1 }
+
+          New-Item -ItemType Directory -Force -Path "composeApp/build/compose/binaries/main/msix" | Out-Null
+          $msixOut = "$PWD\composeApp\build\compose\binaries\main\msix\SMSNode-$versionName.msix"
+          & $makeappx.FullName pack /d $appDir /p $msixOut /o
+          
+          # Pass the MSIX path to next step
+          echo "MSIX_PATH=$msixOut" >> $env:GITHUB_ENV
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-release
-          path: composeApp/build/compose/binaries/main/msi/*.msi
+          path: |
+            composeApp/build/compose/binaries/main/msi/*.msi
+            composeApp/build/compose/binaries/main/msix/*.msix
 
-      - name: Publish to MS Store
-        if: ${{ inputs.publish_ms_store == true }}
-        uses: microsoft/action-store-publish@v3
-        with:
-          tenant-id: ${{ secrets.MS_STORE_TENANT_ID }}
-          client-id: ${{ secrets.MS_STORE_CLIENT_ID }}
-          client-secret: ${{ secrets.MS_STORE_CLIENT_SECRET }}
-          app-id: ${{ secrets.MS_STORE_APP_ID }}
-          package-path: composeApp/build/compose/binaries/main/msi/*.msi

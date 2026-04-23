@@ -76,15 +76,107 @@ jobs:
           track: internal
           status: draft
 
-      # RuStore Python Script (simplified version for this workflow)
       - name: Publish to RuStore
         if: ${{ inputs.publish_rustore == true }}
         env:
           RUSTORE_KEY_ID: ${{ secrets.RUSTORE_KEY_ID }}
           RUSTORE_PRIVATE_KEY: ${{ secrets.RUSTORE_PRIVATE_KEY }}
           PACKAGE_NAME: ${{ secrets.RUSTORE_PACKAGE_NAME }}
-          VERSION_NAME: ${{ inputs.version_name }}
+          APP_VERSION_NAME: ${{ inputs.version_name }}
         run: |
-          # (Здесь используется ваш существующий скрипт из manual_release.yml)
-          # Для краткости я не дублирую весь Python-код, но в реальном файле он должен быть.
-          echo "RuStore publishing logic would run here"
+          APK_PATH=$(find composeApp/build/outputs/apk/release -name "*release*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            APK_PATH=$(find composeApp/build/outputs/apk/release -name "*.apk" | head -n 1)
+          fi
+          
+          if [ -z "$RUSTORE_KEY_ID" ] || [ -z "$RUSTORE_PRIVATE_KEY" ]; then
+            echo "RuStore secrets (KEY_ID or PRIVATE_KEY) are missing!"
+            exit 1
+          fi
+          
+          python -m pip install --upgrade pip
+          python -m pip install pycryptodome requests requests-toolbelt
+          
+          python - << EOF
+          import os, base64, datetime, json, sys, requests
+          from Crypto.PublicKey import RSA
+          from Crypto.Signature import pkcs1_15
+          from Crypto.Hash import SHA512
+          from requests_toolbelt.multipart.encoder import MultipartEncoder
+          
+          key_id = os.getenv("RUSTORE_KEY_ID")
+          private_key_b64 = os.getenv("RUSTORE_PRIVATE_KEY")
+          pkg_name = os.getenv("PACKAGE_NAME")
+          version_name = os.getenv("APP_VERSION_NAME")
+          apk_path = "$APK_PATH"
+          
+          try:
+              private_key = RSA.import_key(base64.b64decode(private_key_b64))
+              timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds')
+              message = key_id + timestamp
+              
+              h = SHA512.new(message.encode())
+              signer = pkcs1_15.new(private_key)
+              signature = base64.b64encode(signer.sign(h)).decode()
+              
+              auth_resp = requests.post(
+                  "https://public-api.rustore.ru/public/auth",
+                  json={"keyId": key_id, "timestamp": timestamp, "signature": signature},
+                  timeout=30
+              )
+              auth_data = auth_resp.json()
+              if auth_data.get("code") != "OK":
+                  print(f"RuStore Auth Failed: {auth_data}")
+                  sys.exit(1)
+              
+              jwe = auth_data['body']['jwe']
+              print("RuStore Authentication Successful")
+          except Exception as e:
+              print(f"Error during RuStore Auth: {e}")
+              sys.exit(1)
+              
+          headers = {"Public-Token": jwe}
+          url_base = f"https://public-api.rustore.ru/public/v1/application/{pkg_name}/version"
+          
+          try:
+              draft_resp = requests.get(url_base, headers=headers)
+              draft_data = draft_resp.json()
+              
+              version_id = None
+              if draft_data.get("code") == "OK":
+                  versions = draft_data.get("body", {}).get("content", [])
+                  for v in versions:
+                      if v.get("versionStatus") == "DRAFT":
+                          version_id = v.get("versionId")
+                          print(f"Using existing draft versionId: {version_id}")
+                          break
+              
+              if not version_id:
+                  print(f"Creating new draft version {version_name}...")
+                  create_resp = requests.post(url_base, headers=headers, json={"versionName": version_name}, timeout=30)
+                  create_data = create_resp.json()
+                  if create_data.get("code") != "OK":
+                      print(f"Failed to create RuStore draft: {create_data}")
+                      sys.exit(1)
+                  version_id = create_data["body"]
+          except Exception as e:
+              print(f"Error creating/checking RuStore draft: {e}")
+              sys.exit(1)
+          
+          try:
+              print(f"Uploading APK: {os.path.basename(apk_path)}...")
+              with open(apk_path, "rb") as f:
+                  m = MultipartEncoder(fields={'file': (os.path.basename(apk_path), f, 'application/vnd.android.package-archive')})
+                  upload_headers = headers.copy()
+                  upload_headers["Content-Type"] = m.content_type
+                  
+                  upload_resp = requests.post(f"{url_base}/{version_id}/apk?isMainApk=true", headers=upload_headers, data=m, timeout=300)
+                  upload_data = upload_resp.json()
+                  if upload_data.get("code") != "OK":
+                      print(f"APK Upload Failed: {upload_data}")
+                      sys.exit(1)
+                  print("APK uploaded successfully to RuStore")
+          except Exception as e:
+              print(f"Error uploading APK to RuStore: {e}")
+              sys.exit(1)
+          EOF

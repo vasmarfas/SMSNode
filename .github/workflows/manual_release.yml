@@ -609,34 +609,33 @@ jobs:
           url_base = f"https://public-api.rustore.ru/public/v1/application/{pkg_name}/version"
           
           try:
-              # Проверяем, нет ли уже открытого черновика
-              draft_resp = requests.get(url_base, headers=headers)
-              draft_data = draft_resp.json()
+              print(f"Creating new draft version {version_name}...")
+              create_resp = requests.post(
+                  url_base,
+                  headers=headers,
+                  json={"publishType": "MANUAL"},
+                  timeout=30
+              )
+              create_data = create_resp.json()
               
               version_id = None
-              if draft_data.get("code") == "OK":
-                  # Если есть черновики, ищем подходящий или используем последний
-                  versions = draft_data.get("body", {}).get("content", [])
-                  for v in versions:
-                      if v.get("versionStatus") == "DRAFT":
-                          version_id = v.get("versionId")
-                          print(f"Using existing draft versionId: {version_id}")
-                          break
+              code = create_data.get("code")
+              message = create_data.get("message", "")
               
-              if not version_id:
-                  print(f"Creating new draft version {version_name}...")
-                  create_resp = requests.post(
-                      url_base,
-                      headers=headers,
-                      json={"versionName": version_name},
-                      timeout=30
-                  )
-                  create_data = create_resp.json()
-                  if create_data.get("code") != "OK":
-                      print(f"Failed to create RuStore draft: {create_data}")
-                      sys.exit(1)
+              if code == "OK":
                   version_id = create_data["body"]
                   print(f"New draft created versionId: {version_id}")
+              elif code == "ERROR" and "You already have draft version with ID =" in message:
+                  import re
+                  match = re.search(r"ID = (\d+)", message)
+                  if match:
+                      version_id = int(match.group(1))
+                      print(f"Reusing existing draft versionId: {version_id}")
+                      
+              if not version_id:
+                  print(f"Failed to create RuStore draft: {create_data}")
+                  print("NOTE: If this is the first time you are publishing the app, you MUST create the first draft manually in the RuStore Console.")
+                  sys.exit(1)
           except Exception as e:
               print(f"Error creating/checking RuStore draft: {e}")
               sys.exit(1)

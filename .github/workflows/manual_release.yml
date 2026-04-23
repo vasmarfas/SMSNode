@@ -391,9 +391,6 @@ jobs:
             cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
           fi
 
-      - name: Build Kotlin Framework for iOS
-        run: ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
-
       - name: Build and Archive iOS App
         run: |
           cd iosApp
@@ -408,7 +405,7 @@ jobs:
             PRODUCT_BUNDLE_IDENTIFIER="com.vasmarfas.smsnode" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             MARKETING_VERSION="${{ inputs.version_name }}" \
-            "OTHER_KKT_FLAGS=-Pcompose.ios.resources.targetArchs=arm64"
+            ARCHS="arm64"
 
       - name: Export IPA
         run: |

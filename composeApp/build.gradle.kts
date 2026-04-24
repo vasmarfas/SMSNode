@@ -105,8 +105,8 @@ android {
         applicationId = "com.vasmarfas.smsnode"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 2
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.2"
+        versionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 6
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.6"
     }
     packaging {
         resources {

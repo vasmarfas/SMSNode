@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download SMSNode</title>
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/vasmarfas/SMSNode/main/composeApp/src/webMain/resources/favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0d1117;
+      --bg-card:       #161b22;
+      --bg-card-hover: #1c2128;
+      --border:        #30363d;
+      --border-accent: #388bfd;
+      --text:          #e6edf3;
+      --text-muted:    #8b949e;
+      --accent:        #58a6ff;
+      --accent-dim:    rgba(88,166,255,.12);
+      --github:        #e6edf3;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Language switcher ──────────────────────────── */
+    .lang-switch {
+      position: fixed; top: 16px; right: 20px; z-index: 200;
+      display: flex; align-items: center;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 3px; gap: 2px;
+    }
+    .lang-btn {
+      background: none; border: none; color: var(--text-muted);
+      font-size: .75rem; font-weight: 700; padding: 4px 11px;
+      border-radius: 5px; cursor: pointer; letter-spacing: .5px;
+      transition: all .15s; font-family: inherit;
+    }
+    .lang-btn.active  { background: var(--accent-dim); color: var(--accent); }
+    .lang-btn:hover:not(.active) { color: var(--text); }
+
+    /* ── Hero ──────────────────────────────────────── */
+    .hero {
+      position: relative; overflow: hidden;
+      padding: 80px 24px 64px; text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(160deg, #131d32 0%, #0d1117 55%);
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(88,166,255,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .app-icon-wrap {
+      width: 88px; height: 88px; margin: 0 auto 24px; border-radius: 22px;
+      background: linear-gradient(135deg, #1c2b4a, #0d1b35);
+      border: 1px solid rgba(88,166,255,.25);
+      box-shadow: 0 0 40px rgba(88,166,255,.15), 0 8px 32px rgba(0,0,0,.4);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .app-icon-wrap img { width: 58px; height: 58px; }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -.5px;
+      background: linear-gradient(120deg, #e6edf3 30%, #58a6ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 12px;
+    }
+    .hero .tagline {
+      color: var(--text-muted); font-size: 1.05rem;
+      max-width: 500px; margin: 0 auto 22px;
+    }
+
+    /* ── Feature pills ──────────────────────────────── */
+    .pills {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 8px; margin: 0 auto 28px; max-width: 560px;
+    }
+    .pill {
+      font-size: .75rem; font-weight: 600; letter-spacing: .3px;
+      padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text-muted);
+    }
+
+    .hero-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 8px;
+      font-size: .95rem; font-weight: 600; text-decoration: none;
+      background: var(--accent); color: #0d1117;
+      border: 1px solid var(--accent); transition: all .2s;
+    }
+    .hero-cta:hover {
+      background: #79b8ff; border-color: #79b8ff;
+      transform: translateY(-1px); box-shadow: 0 4px 20px rgba(88,166,255,.35);
+    }
+    .hero-cta svg { flex-shrink: 0; }
+
+    /* ── Layout ─────────────────────────────────────── */
+    .container { max-width: 940px; margin: 0 auto; padding: 56px 20px 88px; }
+    .section { margin-bottom: 48px; }
+    .section-label {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Cards ──────────────────────────────────────── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+    .cards.single { grid-template-columns: 1fr; }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+    .card:hover {
+      border-color: var(--border-accent); background: var(--bg-card-hover);
+      transform: translateY(-2px); box-shadow: 0 4px 24px rgba(88,166,255,.08);
+    }
+    .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .plat-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .card-name { font-size: 1rem; font-weight: 600; }
+    .card-sub  { font-size: .78rem; color: var(--text-muted); margin-top: 1px; }
+    .actions   { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Store button ───────────────────────────────── */
+    .sbtn {
+      display: flex; align-items: center; gap: 11px; padding: 10px 13px;
+      border-radius: 8px; text-decoration: none; color: var(--text);
+      background: rgba(255,255,255,.03); border: 1px solid var(--border);
+      transition: all .15s;
+    }
+    .sbtn:hover { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .sbtn:hover .sbtn-label { color: var(--accent); opacity: .7; }
+    .sbtn svg { flex-shrink: 0; }
+    .sbtn-label { font-size: .68rem; color: var(--text-muted); display: block; line-height: 1; margin-bottom: 2px; }
+    .sbtn-name  { font-size: .9rem; font-weight: 600; display: block; line-height: 1.2; }
+
+    /* ── Web card ───────────────────────────────────── */
+    .card.web {
+      background: linear-gradient(135deg, #142035 0%, #0d1a2e 100%);
+      border-color: rgba(88,166,255,.22);
+      display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+    }
+    .web-info { flex: 1; min-width: 200px; }
+    .web-info .card-name { font-size: 1.1rem; }
+    .web-info p { font-size: .88rem; color: var(--text-muted); margin-top: 6px; }
+    .web-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 22px; border-radius: 8px;
+      font-size: .9rem; font-weight: 600; text-decoration: none;
+      color: var(--accent); border: 1px solid var(--accent);
+      background: var(--accent-dim); transition: all .2s; white-space: nowrap;
+    }
+    .web-btn:hover { background: var(--accent); color: #0d1117; box-shadow: 0 4px 16px rgba(88,166,255,.3); }
+
+    /* ── Footer ─────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border); padding: 28px 20px;
+      text-align: center; color: var(--text-muted); font-size: .85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    footer .links { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
+
+    @media (max-width: 560px) {
+      .cards { grid-template-columns: 1fr; }
+      .card.web { flex-direction: column; align-items: flex-start; }
+      .lang-switch { top: 12px; right: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LANGUAGE SWITCH ── -->
+<div class="lang-switch">
+  <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+</div>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="app-icon-wrap">
+    <img src="https://raw.githubusercontent.com/vasmarfas/SMSNode/main/composeApp/src/webMain/resources/favicon.png" alt="SMSNode">
+  </div>
+  <h1>SMSNode</h1>
+  <p class="tagline" data-i18n="tagline">Self-hosted SMS management through your own GSM gateways — no third-party services, no per-message fees.</p>
+  <div class="pills">
+    <span class="pill" data-i18n="pillInfra">Own infrastructure</span>
+    <span class="pill" data-i18n="pillQueue">Queue with auto-retries</span>
+    <span class="pill">REST API + Webhooks</span>
+    <span class="pill" data-i18n="pillRoles">Multi-user roles</span>
+    <span class="pill" data-i18n="pillPlatforms">Android · iOS · Windows · Linux · Web</span>
+  </div>
+  <a href="https://vasmarfas.github.io/SMSNode/" class="hero-cta">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    <span data-i18n="openWebApp">Open Web App</span>
+  </a>
+</div>
+
+<!-- ── CONTENT ── -->
+<div class="container">
+
+  <!-- Web -->
+  <div class="section">
+    <div class="section-label" data-i18n="secWeb">Web</div>
+    <div class="cards single">
+      <div class="card web">
+        <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">
+          <div class="plat-icon" style="background:rgba(88,166,255,.12);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name" data-i18n="webTitle">Web Version</div>
+            <div class="card-sub" data-i18n="webSub">No install · Runs in the browser via WebAssembly</div>
+          </div>
+        </div>
+        <a href="https://vasmarfas.github.io/SMSNode/" class="web-btn">
+          <span data-i18n="launchApp">Launch App</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile -->
+  <div class="section">
+    <div class="section-label" data-i18n="secMobile">Mobile</div>
+    <div class="cards">
+
+      <!-- Android -->
+      <div class="card">
+        <div class="card-head">
+          <div class="plat-icon" style="background:rgba(61,220,132,.1);">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="#3ddc84">
+              <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C4.98 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M17.82 15.64a2.18 2.18 0 0 1 2.18 2.18C20 19.01 19.01 20 17.82 20c-1.2 0-2.18-.99-2.18-2.18a2.18 2.18 0 0 1 2.18-2.18M17.36 8l1.44-2.5a.3.3 0 0 0-.11-.4.3.3 0 0 0-.4.11L16.83 7.7A9.18 9.18 0 0 0 12 6.64c-1.6 0-3.11.42-4.83 1.06L5.71 5.21a.3.3 0 0 0-.4-.11.3.3 0 0 0-.11.4L6.64 8C4.55 9.27 3.18 11.37 3 13.82h18c-.18-2.45-1.55-4.55-3.64-5.82M8.72 11.45a.72.72 0 0 1-.72-.72c0-.4.32-.72.72-.72.4 0 .72.32.72.72 0 .4-.32.72-.72.72m6.56 0a.72.72 0 0 1-.72-.72c0-.4.32-.72.72-.72.4 0 .72.32.72.72 0 .4-.32.72-.72.72z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name">Android</div>
+            <div class="card-sub" data-i18n="androidSub">Android 6.0+ · Compose Multiplatform</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="https://play.google.com/store/apps/details?id=com.vasmarfas.smsnode" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.867a1 1 0 0 1 0 1.722l-2.26 1.305L13.06 12l2.379-2.379 2.259 1.219zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z" fill="#4CAF50"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelGetOn">Get it on</span>
+              <span class="sbtn-name">Google Play</span>
+            </span>
+          </a>
+          <a href="https://apps.rustore.ru/app/com.vasmarfas.smsnode" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="6" fill="#2979ff"/>
+              <text x="4" y="17" font-family="Arial" font-weight="bold" font-size="13" fill="white">RS</text>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelFrom">Download from</span>
+              <span class="sbtn-name">RuStore</span>
+            </span>
+          </a>
+          <a href="https://github.com/vasmarfas/SMSNode/releases/latest" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--github)">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDirect">Direct download</span>
+              <span class="sbtn-name" data-i18n="apkGh">APK · GitHub Releases</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- iOS -->
+      <div class="card">
+        <div class="card-head">
+          <div class="plat-icon" style="background:rgba(200,205,212,.08);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#c8cdd4">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name" data-i18n="iphoneTitle">iPhone &amp; iPad</div>
+            <div class="card-sub" data-i18n="iosSub">iOS 14.0+ · Compose Multiplatform</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="https://apps.apple.com/ru/app/smsnode/id6760977645" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="5" fill="#0a84ff"/>
+              <path d="M12 5.5C8.41 5.5 5.5 8.41 5.5 12S8.41 18.5 12 18.5 18.5 15.59 18.5 12 15.59 5.5 12 5.5zm.75 9.75h-1.5v-5.5h1.5v5.5zm0-7h-1.5v-1.5h1.5v1.5z" fill="white"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDownloadOn">Download on the</span>
+              <span class="sbtn-name">App Store</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Desktop -->
+  <div class="section">
+    <div class="section-label" data-i18n="secDesktop">Desktop</div>
+    <div class="cards">
+
+      <!-- Windows -->
+      <div class="card">
+        <div class="card-head">
+          <div class="plat-icon" style="background:rgba(0,120,212,.12);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4">
+              <path d="M3 5.557L10.514 4.5V11.5H3V5.557zM11.5 4.35L21 3v8.5h-9.5V4.35zM3 12.5h7.514V19.5L3 18.443V12.5zm8.5 0H21v8.5l-9.5-1.35V12.5z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name">Windows</div>
+            <div class="card-sub" data-i18n="winSub">Windows 10 / 11 · x64 · MSI &amp; MSIX</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="#" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4">
+              <path d="M3 5.557L10.514 4.5V11.5H3V5.557zM11.5 4.35L21 3v8.5h-9.5V4.35zM3 12.5h7.514V19.5L3 18.443V12.5zm8.5 0H21v8.5l-9.5-1.35V12.5z"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelGetFrom">Get it from</span>
+              <span class="sbtn-name">Microsoft Store</span>
+            </span>
+          </a>
+          <a href="https://github.com/vasmarfas/SMSNode/releases/latest" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--github)">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDirect">Direct download</span>
+              <span class="sbtn-name" data-i18n="msiGh">MSI / MSIX · GitHub Releases</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- macOS -->
+      <div class="card">
+        <div class="card-head">
+          <div class="plat-icon" style="background:rgba(168,176,187,.08);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#a8b0bb">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name">macOS</div>
+            <div class="card-sub" data-i18n="macSub">macOS 12.0+</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="https://apps.apple.com/ru/app/smsnode/id6760977645" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="5" fill="#1c1c1e"/>
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" fill="white" opacity=".9"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDownloadOn">Download on the</span>
+              <span class="sbtn-name" data-i18n="macAppStore">Mac App Store</span>
+            </span>
+          </a>
+          <a href="https://github.com/vasmarfas/SMSNode/releases/latest" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--github)">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDirect">Direct download</span>
+              <span class="sbtn-name" data-i18n="dmgGh">DMG · GitHub Releases</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Linux -->
+      <div class="card">
+        <div class="card-head">
+          <div class="plat-icon" style="background:rgba(249,115,22,.1);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#f97316">
+              <path d="M14.62 8.35c-.55-.28-1.3-.57-1.95-.84-.32-.13-.62-.27-.88-.4-.07-.56-.16-1.18-.27-1.75-.4-2.02-1.14-3.27-2.14-3.27-.48 0-.95.27-1.36.78-.73.92-1.08 2.54-.94 4.32.08.97.3 1.94.63 2.82-.96 1.7-1.8 3.55-1.8 4.98 0 2.04 1.34 3.3 3.56 3.3.78 0 1.55-.18 2.16-.51.61.33 1.38.51 2.16.51 2.22 0 3.56-1.26 3.56-3.3 0-1.54-.94-3.56-2.06-5.21l-.67-.43zm-4.94-5.04c.57 0 1.08 1.04 1.4 2.76.08.44.15.9.21 1.35-.36-.13-.68-.25-.91-.35-.76-.33-1.43-.74-1.88-1.16.05-1.58.52-2.6 1.18-2.6zm1.55 13.47c-.56 0-1.11-.14-1.55-.4.44-.26.99-.4 1.55-.4.56 0 1.11.14 1.55.4-.44.26-.99.4-1.55.4zm3.82-.97c-.35.5-.96.82-1.71.9-.53-.38-1.26-.6-2.11-.6s-1.58.22-2.11.6c-.75-.08-1.36-.4-1.71-.9-.28-.39-.43-.87-.43-1.41 0-1.1.76-2.69 1.63-4.08.38.57.73 1.2 1.01 1.83.23.51.63.76 1.07.76h1.08c.44 0 .84-.25 1.07-.76.28-.63.63-1.26 1.01-1.83.87 1.39 1.63 2.98 1.63 4.08 0 .54-.15 1.02-.43 1.41z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="card-name">Linux</div>
+            <div class="card-sub" data-i18n="linuxSub">x86_64 · DEB &amp; RPM</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="https://github.com/vasmarfas/SMSNode/releases/latest" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDirect">Direct download</span>
+              <span class="sbtn-name" data-i18n="debGh">DEB Package · GitHub Releases</span>
+            </span>
+          </a>
+          <a href="https://github.com/vasmarfas/SMSNode/releases/latest" class="sbtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>
+              <span class="sbtn-label" data-i18n="labelDirect">Direct download</span>
+              <span class="sbtn-name" data-i18n="rpmGh">RPM Package · GitHub Releases</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- All releases -->
+  <div style="text-align:center; margin-top: 8px;">
+    <a href="https://github.com/vasmarfas/SMSNode/releases" class="sbtn" style="display:inline-flex;width:auto;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--github)">
+        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+      <span style="font-size:.9rem;" data-i18n="allReleases">Browse all releases on GitHub</span>
+    </a>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div>© 2025 vasmarfas · SMSNode</div>
+  <div class="links">
+    <a href="privacy.html" data-i18n="footerPrivacy">Privacy Policy</a>
+    <a href="terms.html" data-i18n="footerTerms">Terms of Use</a>
+    <a href="https://github.com/vasmarfas/SMSNode">GitHub</a>
+    <a href="mailto:support@vasmarfas.com" data-i18n="footerSupport">Support</a>
+  </div>
+</footer>
+
+<script>
+  const T = {
+    en: {
+      pageTitle:       "Download SMSNode",
+      tagline:         "Self-hosted SMS management through your own GSM gateways — no third-party services, no per-message fees.",
+      pillInfra:       "Own infrastructure",
+      pillQueue:       "Queue with auto-retries",
+      pillRoles:       "Multi-user roles",
+      pillPlatforms:   "Android · iOS · Windows · Linux · Web",
+      openWebApp:      "Open Web App",
+      secWeb:          "Web",
+      secMobile:       "Mobile",
+      secDesktop:      "Desktop",
+      webTitle:        "Web Version",
+      webSub:          "No install · Runs in the browser via WebAssembly",
+      launchApp:       "Launch App",
+      iphoneTitle:     "iPhone &amp; iPad",
+      androidSub:      "Android 6.0+ · Compose Multiplatform",
+      iosSub:          "iOS 14.0+ · Compose Multiplatform",
+      winSub:          "Windows 10 / 11 · x64 · MSI &amp; MSIX",
+      macSub:          "macOS 12.0+",
+      linuxSub:        "x86_64 · DEB &amp; RPM",
+      labelGetOn:      "Get it on",
+      labelFrom:       "Download from",
+      labelDirect:     "Direct download",
+      labelGetFrom:    "Get it from",
+      labelDownloadOn: "Download on the",
+      macAppStore:     "Mac App Store",
+      apkGh:           "APK · GitHub Releases",
+      msiGh:           "MSI / MSIX · GitHub Releases",
+      dmgGh:           "DMG · GitHub Releases",
+      debGh:           "DEB Package · GitHub Releases",
+      rpmGh:           "RPM Package · GitHub Releases",
+      allReleases:     "Browse all releases on GitHub",
+      footerPrivacy:   "Privacy Policy",
+      footerTerms:     "Terms of Use",
+      footerSupport:   "Support",
+    },
+    ru: {
+      pageTitle:       "Скачать SMSNode",
+      tagline:         "Self-hosted управление SMS через собственные GSM-шлюзы — без сторонних сервисов и поштучной оплаты.",
+      pillInfra:       "Своя инфраструктура",
+      pillQueue:       "Очередь с автоповторами",
+      pillRoles:       "Ролевая модель",
+      pillPlatforms:   "Android · iOS · Windows · Linux · Веб",
+      openWebApp:      "Открыть веб-приложение",
+      secWeb:          "Веб",
+      secMobile:       "Мобильные",
+      secDesktop:      "Компьютер",
+      webTitle:        "Веб-версия",
+      webSub:          "Без установки · Работает в браузере через WebAssembly",
+      launchApp:       "Открыть",
+      iphoneTitle:     "iPhone и iPad",
+      androidSub:      "Android 6.0+ · Compose Multiplatform",
+      iosSub:          "iOS 14.0+ · Compose Multiplatform",
+      winSub:          "Windows 10 / 11 · x64 · MSI и MSIX",
+      macSub:          "macOS 12.0+",
+      linuxSub:        "x86_64 · DEB и RPM",
+      labelGetOn:      "Скачать в",
+      labelFrom:       "Скачать из",
+      labelDirect:     "Прямая загрузка",
+      labelGetFrom:    "Скачать из",
+      labelDownloadOn: "Скачать в",
+      macAppStore:     "Mac App Store",
+      apkGh:           "APK · GitHub Releases",
+      msiGh:           "MSI / MSIX · GitHub Releases",
+      dmgGh:           "DMG · GitHub Releases",
+      debGh:           "DEB-пакет · GitHub Releases",
+      rpmGh:           "RPM-пакет · GitHub Releases",
+      allReleases:     "Все релизы на GitHub",
+      footerPrivacy:   "Политика конфиденциальности",
+      footerTerms:     "Условия использования",
+      footerSupport:   "Поддержка",
+    }
+  };
+
+  function setLang(lang) {
+    document.documentElement.lang = lang;
+    document.title = T[lang].pageTitle;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      if (T[lang][key] !== undefined) el.innerHTML = T[lang][key];
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    try { localStorage.setItem('smsnode-lang', lang); } catch(_) {}
+  }
+
+  (function () {
+    let saved;
+    try { saved = localStorage.getItem('smsnode-lang'); } catch(_) {}
+    const browser = (navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    setLang(saved || browser);
+  })();
+</script>
+
+</body>
+</html>

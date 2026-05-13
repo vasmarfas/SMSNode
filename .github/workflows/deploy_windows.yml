@@ -53,9 +53,9 @@ jobs:
           }
           $appxVersion = $outParts -join "."
 
-          $identityName = if ($env:MS_STORE_IDENTITY_NAME) { $env:MS_STORE_IDENTITY_NAME } else { "SMSNode" }
-          $publisher = if ($env:MS_STORE_PUBLISHER) { $env:MS_STORE_PUBLISHER } else { "CN=Vasilii" }
-          $pubDisplayName = if ($env:MS_STORE_PUBLISHER_DISPLAY_NAME) { $env:MS_STORE_PUBLISHER_DISPLAY_NAME } else { "Vasmarfas" }
+          $identityName = if ($env:MS_STORE_IDENTITY_NAME) { $env:MS_STORE_IDENTITY_NAME } else { "vasmarfas.SMSNode" }
+          $publisher = if ($env:MS_STORE_PUBLISHER) { $env:MS_STORE_PUBLISHER } else { "CN=DF5C0277-3CEA-41B9-903E-856755866E0E" }
+          $pubDisplayName = if ($env:MS_STORE_PUBLISHER_DISPLAY_NAME) { $env:MS_STORE_PUBLISHER_DISPLAY_NAME } else { "vasmarfas" }
 
           $manifest = @"
           <?xml version=`"1.0`" encoding=`"utf-8`"?>

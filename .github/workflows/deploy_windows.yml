@@ -88,7 +88,8 @@ jobs:
             </Applications>
           </Package>
           "@
-          Set-Content -Path "$appDir\AppxManifest.xml" -Value $manifest -Encoding UTF8
+          $cleanManifest = ($manifest -split "`n" | ForEach-Object { $_.TrimStart() }) -join "`n"
+          Set-Content -Path "$appDir\AppxManifest.xml" -Value $cleanManifest.Trim() -Encoding UTF8
 
           New-Item -ItemType Directory -Force -Path "$appDir\Assets" | Out-Null
           

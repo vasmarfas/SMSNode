@@ -177,7 +177,8 @@ jobs:
             </Applications>
           </Package>
           "@
-          Set-Content -Path "$appDir\AppxManifest.xml" -Value $manifest -Encoding UTF8
+          $cleanManifest = ($manifest -split "`n" | ForEach-Object { $_.TrimStart() }) -join "`n"
+          Set-Content -Path "$appDir\AppxManifest.xml" -Value $cleanManifest.Trim() -Encoding UTF8
 
           New-Item -ItemType Directory -Force -Path "$appDir\Assets" | Out-Null
           
@@ -463,12 +464,17 @@ jobs:
           APP_VERSION_NAME: ${{ inputs.version_name }}
         run: ./gradlew :composeApp:wasmJsBrowserDistribution
 
+      - name: Zip WASM output
+        run: |
+          cd composeApp/build/dist/wasmJs/productionExecutable
+          zip -r "$GITHUB_WORKSPACE/SMSNode-${{ inputs.version_name }}-web.zip" .
+
       - name: Upload WASM artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wasm-release
           if-no-files-found: warn
-          path: composeApp/build/dist/wasmJs/productionExecutable/
+          path: SMSNode-${{ inputs.version_name }}-web.zip
 
   github_release:
     name: Publish to GitHub Releases
@@ -495,11 +501,16 @@ jobs:
           draft: true
           generate_release_notes: true
           files: |
-            all-artifacts/android-release/*
-            all-artifacts/windows-release/*
-            all-artifacts/linux-release/*
-            all-artifacts/macos-release/*
-            all-artifacts/wasm-release/*
+            all-artifacts/android-release/**/*.apk
+            all-artifacts/android-release/**/*.aab
+            all-artifacts/windows-release/**/*.msi
+            all-artifacts/windows-release/**/*.msix
+            all-artifacts/linux-release/**/*.deb
+            all-artifacts/linux-release/**/*.rpm
+            all-artifacts/macos-release/**/*.dmg
+            all-artifacts/macos-release/**/*.pkg
+            all-artifacts/wasm-release/*.zip
+            all-artifacts/ios-release/**/*.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

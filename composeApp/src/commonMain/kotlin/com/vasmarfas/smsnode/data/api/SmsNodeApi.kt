@@ -10,13 +10,16 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 class SmsNodeApi(
-    private val client: HttpClient,
+    private var client: HttpClient,
     private var baseUrl: String,
     private var token: String? = null
 ) {
     fun setBaseUrl(url: String) { baseUrl = url.trimEnd('/') }
     fun setToken(t: String?) { token = t }
     fun getToken(): String? = token
+
+    /** Подменяет транспорт — используется для перехода в офлайн-демо (mock-движок). */
+    fun useClient(newClient: HttpClient) { client = newClient }
 
     private fun HttpRequestBuilder.auth() {
         token?.let { header(HttpHeaders.Authorization, "Bearer $it") }

@@ -128,5 +128,6 @@
     <string name="no_internet_error">No internet connection. Please check your network.</string>
     <string name="server_not_available">Server is not responding. Please try again later.</string>
     <string name="retry">Retry</string>
+    <string name="open_offline_demo_btn">Open demo offline</string>
     <string name="consent_disclaimer">I accept the Terms of Use and confirm that I bear full responsibility for operating the system, for the connected equipment and SIM cards, and for the content and legality of the messages sent. Any unlawful use, including spam, fraud, and caller-ID spoofing, is prohibited.</string>
 </resources>

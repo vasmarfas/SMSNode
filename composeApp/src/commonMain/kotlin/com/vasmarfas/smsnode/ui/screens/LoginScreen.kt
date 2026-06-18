@@ -40,6 +40,7 @@ import smsnode.composeapp.generated.resources.Res
 import smsnode.composeapp.generated.resources.fill_review_demo_btn
 import smsnode.composeapp.generated.resources.login_btn
 import smsnode.composeapp.generated.resources.login_title
+import smsnode.composeapp.generated.resources.open_offline_demo_btn
 import smsnode.composeapp.generated.resources.password
 import smsnode.composeapp.generated.resources.privacy_policy
 import smsnode.composeapp.generated.resources.register_btn
@@ -163,6 +164,16 @@ fun LoginScreen(
                     enabled = !loading
                 ) {
                     Text(stringResource(Res.string.fill_review_demo_btn))
+                }
+                TextButton(
+                    onClick = {
+                        onClearLoginResult()
+                        loading = true
+                        viewModel.enterOfflineDemo()
+                    },
+                    enabled = !loading
+                ) {
+                    Text(stringResource(Res.string.open_offline_demo_btn))
                 }
                 Spacer(Modifier.height(8.dp))
                 Button(

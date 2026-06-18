@@ -4,6 +4,9 @@ import com.vasmarfas.smsnode.data.api.ApiResult
 import com.vasmarfas.smsnode.data.api.RegisterResult
 import com.vasmarfas.smsnode.data.api.SmsNodeApi
 import com.vasmarfas.smsnode.data.api.createSmsNodeHttpClient
+import com.vasmarfas.smsnode.data.demo.OFFLINE_DEMO_URL
+import com.vasmarfas.smsnode.data.demo.createDemoHttpClient
+import io.ktor.client.HttpClient
 import com.vasmarfas.smsnode.data.models.ContactResponse
 import com.vasmarfas.smsnode.data.models.DialogSummary
 import com.vasmarfas.smsnode.data.models.MessageResponse
@@ -50,7 +53,20 @@ class AppViewModel(
     }
 
     private val initialBaseUrl = normalizeBaseUrl(baseUrl)
-    val api: SmsNodeApi = SmsNodeApi(createSmsNodeHttpClient(), initialBaseUrl)
+    private val realClient: HttpClient = createSmsNodeHttpClient()
+    val api: SmsNodeApi = SmsNodeApi(realClient, initialBaseUrl)
+
+    private val _isOfflineDemo = MutableStateFlow(false)
+    val isOfflineDemo: StateFlow<Boolean> = _isOfflineDemo.asStateFlow()
+
+    /** Возвращает API на реальный транспорт, если он был подменён офлайн-демо. */
+    private fun leaveOfflineDemoTransport() {
+        if (!_isOfflineDemo.value) return
+        api.useClient(realClient)
+        _isOfflineDemo.value = false
+        api.setBaseUrl(initialBaseUrl)
+        _baseUrl.value = initialBaseUrl
+    }
 
     private val _baseUrl = MutableStateFlow(initialBaseUrl)
     val baseUrl: StateFlow<String> = _baseUrl.asStateFlow()
@@ -248,7 +264,40 @@ class AppViewModel(
         }
     }
 
+    /** Вход в офлайн-демо: подменяет транспорт на встроенный mock и логинит demo-пользователя без сети. */
+    fun enterOfflineDemo() {
+        _loginResult.value = null
+        scope.launch {
+            api.useClient(createDemoHttpClient())
+            api.setBaseUrl(OFFLINE_DEMO_URL)
+            _baseUrl.value = OFFLINE_DEMO_URL
+            _isOfflineDemo.value = true
+
+            when (val r = api.login("demo", "demo")) {
+                is ApiResult.Success -> {
+                    val token = r.value.accessToken
+                    api.setToken(token)
+                    when (val me = api.me()) {
+                        is ApiResult.Success -> {
+                            sessionManager.setSession(token, me.value)
+                            _loginResult.value = LoginResult.Success
+                        }
+                        else -> {
+                            leaveOfflineDemoTransport()
+                            _loginResult.value = LoginResult.Error("Не удалось открыть демо")
+                        }
+                    }
+                }
+                else -> {
+                    leaveOfflineDemoTransport()
+                    _loginResult.value = LoginResult.Error("Не удалось открыть демо")
+                }
+            }
+        }
+    }
+
     fun login(username: String, password: String) {
+        leaveOfflineDemoTransport()
         _loginResult.value = null
         scope.launch {
             api.setBaseUrl(_baseUrl.value)
@@ -288,6 +337,7 @@ class AppViewModel(
              return
         }
 
+        leaveOfflineDemoTransport()
         _registerResult.value = null
         scope.launch {
             api.setBaseUrl(_baseUrl.value)
@@ -324,6 +374,7 @@ class AppViewModel(
     }
 
     fun logout() {
+        leaveOfflineDemoTransport()
         api.setToken(null)
         TokenStorage.clearToken()
         stopMessagesPolling()

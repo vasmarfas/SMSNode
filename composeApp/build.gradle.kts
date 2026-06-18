@@ -63,6 +63,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.mock)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.navigation.compose)
         }
@@ -106,7 +107,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: 6
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.6"
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.1.0"
     }
     packaging {
         resources {

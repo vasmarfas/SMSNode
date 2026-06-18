@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -49,6 +51,7 @@ fun RegisterScreen(
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var consentAccepted by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
 
     if (registerResult != null && loading) {
@@ -130,6 +133,25 @@ fun RegisterScreen(
                     else -> { }
                 }
 
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { consentAccepted = !consentAccepted },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = consentAccepted,
+                        onCheckedChange = { consentAccepted = it }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(Res.string.consent_disclaimer),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = {
@@ -138,7 +160,7 @@ fun RegisterScreen(
                         viewModel.register(username, password)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = username.length in 3..50 && password.length >= 6 && !loading
+                    enabled = username.length in 3..50 && password.length >= 6 && consentAccepted && !loading
                 ) {
                     Text(stringResource(Res.string.register_btn))
                 }
